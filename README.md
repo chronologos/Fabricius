@@ -1,8 +1,8 @@
 # Fabricius
 
-Fabricius is an Anki plugin that bidirectionally syncs between Roam and Anki.
+Fabricius is an Anki plugin that bidirectionally syncs between Roam and Anki. The goal is to have robust, fast syncing for the most common use-cases.
 
-Connecting the east side of the city to Tiber Island since 62 BC, the Pons Fabricius (Fabricius Bridge) is the oldest bridge in Rome to survive to the present day.
+Connecting the east side of the city to Tiber Island since 62 BC, the Pons Fabricius (Fabricius Bridge) is the oldest bridge in Rome to survive to the present day. - Wikipedia
 
 ## Getting started
 You need to define a `config.json` as well as custom note type(s) that will be used by the plugin. As a recommended starter configuration, we recommend that you use cloze notes:
@@ -39,7 +39,7 @@ ClozeRoam
 - TextUID
 ```
 
-text in Roam (*note the modified cloze syntax, since Roam reserves `{{}}` for internal use*)
+text in Roam (*note the modified cloze syntax, since Roam reserves `{{}}` and `::` for internal use*)
 ```text
     - "In [[C]], {c2:indirect references} to variables are done via {c1:[[pointers]]} #srs"
 ```
@@ -63,11 +63,14 @@ In [[C]], {{c2::indirect references}} to variables are done via {{c1::[[pointers
 ```
 
 ## Roadmap
-1. Cloze bidirectional sync e2e prototype
+1. Cloze bidirectional sync e2e prototype [DONE - 2020-10-04]
 2. Handle edge cases
    1. Probably use roam as source of truth. block refs might change, entire blocks may be deleted. What is the behaviour then?
-3. Support custom note types
-4. Support tag sync
+3. Increase performance and reduce API usage - batch updates, batch queries.
+   1. Depends on how Roam API evolves.
+4. Add a link to the relevant roam block for each field.
+5. Support custom note types
+6. Support tag sync
 
 ## Design Notes
 
