@@ -1,0 +1,11 @@
+{
+    "apiKey": "123",
+    "apiToken": "321",
+    "cards": [
+        {
+            "model": "ClozeRoam",
+            "deck": "Default",
+            "tagMap": {"srs/cloze":"Text"}
+        }
+    ]
+}

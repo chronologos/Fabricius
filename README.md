@@ -62,8 +62,40 @@ resulting card in anki
 In [[C]], {{c2::indirect references}} to variables are done via {{c1::[[pointers]]}} #srs
 ```
 
-## Other note models
+## Roadmap
+1. Cloze bidirectional sync e2e prototype
+2. Handle edge cases
+   1. Probably use roam as source of truth. block refs might change, entire blocks may be deleted. What is the behaviour then?
+3. Support custom note types
+4. Support tag sync
 
+## Design Notes
+
+### Sync model (simplified)
+For a given config:
+
+```json
+{
+    "cards": [
+        {
+            "model" : "MyAnkiModel",
+            "deck" : "default",
+            "tagMap": {"srs/f":"Front", "srs/e":"Back", "srs/info": "Info"}
+        }
+    ]
+}
+```
+
+we will expect all the fields (specified as values in `tagMap`) to exist. In addition `{field}UID` must also exist as a field. This allows the plugin to track which field in the Anki note maps to which Roam block.
+
+1. Plugin pulls all relevant (block, modification date) based on configured tags from Roam.
+2. If the card does not exist in anki, create a new card
+3. Load the corresponding notes in Anki and read their modification date
+4. If they are unequal, resolve with the newer one (either pushing back to Roam, or adding a card to Anki)
+
+### Ideas for other note models
+
+#### Using Nesting to represent custom cards
 Blocks nested under one another are treated as a single note. Not all fields in a note need to be specified, and order of the fields does not matter.
 
 anki model:
@@ -90,32 +122,19 @@ plugin config maps tags to fields in the Anki model:
 }
 ```
 
-## Sync model (simplified)
-For a given config:
+Pros:
+- Very flexible
 
-```json
-{
-    "cards": [
-        {
-            "model" : "MyAnkiModel",
-            "deck" : "default",
-            "tagMap": {"srs/f":"Front", "srs/e":"Back", "srs/info": "Info"}
-        }
-    ]
-}
+Cons:
+- Each model would need to have unique field names
+- More complicated to implement since we don't know which field will be a parent block.
+
+#### Using "header" tags for custom models
+```text
+    - #srs/country <----- everything under this block will be considered as one note in Anki.
+        - What is the [[srs/countrycapital]] of Italy? <----- we support this notation too
+        - Rome #srs/countrycapitalans
+        - Pizza came from Italy. <----- anything without relevant tags will be ignored. 
 ```
 
-we will expect all the fields (specified as values in `tagMap`) to exist. In addition `{field}UID` must also exist as a field. This allows the plugin to track which field in the Anki note maps to which Roam block.
-
-1. Plugin pulls all relevant (block, modification date) based on configured tags from Roam.
-2. If the card does not exist in anki, create a new card
-3. Load the corresponding notes in Anki and read their modification date
-4. If they are unequal, resolve with the newer one (either pushing back to Roam, or adding a card to Anki)
-
-
-### Roadmap
-1. Cloze bidirectional sync
-2. Support reconciliation 
-   1. Probably use roam as source of truth. block refs might change, entire blocks may be deleted. What is the behaviour then?
-3. Support other note models
-4. Support tag sync
+Simpler to implement and also quite intuitive.
