@@ -6,7 +6,7 @@ from .secrets import GRAPHNAME, APIKEY, APITOKEN, ROAMAPIURL
 # i would have used edn_format but Anki plugins should be low-dependency since Anki does not come with all of Python's built-in packages.
 
 # for testing only
-DEBUG = True
+DEBUG = False
 
 
 def debug(s):

@@ -72,6 +72,9 @@ In [[C]], {{c2::indirect references}} to variables are done via {{c1::[[pointers
 5. Support custom note types
 6. Support tag sync
 
+## Limitations
+- If cloze deletions are removed from Roam, the corresponding cloze card needs to be emptied manually in Anki after syncing (Tools -> Empty Cards...)
+
 ## Design Notes
 
 ### Sync model (simplified)
