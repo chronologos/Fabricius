@@ -7,6 +7,6 @@ def syncAll():
     s = Syncer()
     s.sync()
 
-action = QAction("Sync Roam and Anki", mw)
+action = QAction("Fabricus: Sync Roam and Anki", mw)
 action.triggered.connect(syncAll)
 mw.form.menuTools.addAction(action)

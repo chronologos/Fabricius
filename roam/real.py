@@ -19,7 +19,29 @@ def debug(s):
 CONTENTTYPE = "application/json"
 
 
-def makeHeaders(apiKey, apiToken):
+class Error(Exception):
+    """Base class for exceptions in this module."""
+
+    pass
+
+
+class InputError(Error):
+    """Exception raised for errors in the input.
+
+    Attributes:
+        expression -- input expression in which the error occurred
+        message -- explanation of the error
+    """
+
+    def __init__(self, expression: str, message: str):
+        self.expression = expression
+        self.message = message
+
+    def __repr__(self) -> str:
+        return 'input "{}" led to exception: {}'.format(self.expression, self.message)
+
+
+def makeHeaders(apiKey: str, apiToken: str):
     return {"Content-Type": CONTENTTYPE, "x-api-key": apiKey, "x-api-token": apiToken}
 
 
@@ -33,10 +55,11 @@ class Block:
     def __init__(self, uid="", text="", modifiedTime=0):
         self.uid = uid
         self.text = text
+        # As of 2020-10-11, this is in unix epoch milliseconds.
         self.modifiedTime = modifiedTime
 
     def __repr__(self):
-        return "(({} - {}))".format(self.uid, trunc(self.text))
+        return "(({} - {} - {}))".format(self.uid, trunc(self.text), self.modifiedTime)
 
 
 queryTmpl = """[:find ?uid ?t ?time\
@@ -58,7 +81,8 @@ class Client:
         self.defaultHeader = makeHeaders(self.apiKey, self.apiToken)
 
     def queryForTag(self, tag: str) -> List[Block]:
-        """Queries for all Roam blocks that have the given tag.
+        """Queries for all Roam blocks that have the given tag. As of 2020-10-11, this does not match the tag if it is in a reference or embed (and this is good).
+
         Args:
             tag: Tag to search for.
 
@@ -66,20 +90,23 @@ class Client:
             List of blocks.
 
         Raises:
-            Exception if query call fails.
+            InputError if query call fails.
         """
-        query = getQuery(self.graphName, tag)
-        debug(query)
-        response = requests.post(
-            self.apiUrl,
-            query,
-            headers=self.defaultHeader,
-        )
-        debug(response)
-        debug(response.content)
-        res = json.loads(response.content)["success"]
-        resBlocks = map(lambda l: Block(l[0], l[1], l[2]), res)
-        return resBlocks
+        try:
+            query = getQuery(self.graphName, tag)
+            debug(query)
+            response = requests.post(
+                self.apiUrl,
+                query,
+                headers=self.defaultHeader,
+            )
+            debug(response)
+            debug(response.content)
+            res = json.loads(response.content)["success"]
+            resBlocks = map(lambda l: Block(l[0], l[1], l[2]), res)
+            return resBlocks
+        except KeyError as e:
+            raise InputError(query, "error querying for tag")
 
     def updateBlock(self, ref: str, newText: str):
         """Updates a single Roam block.
@@ -91,18 +118,21 @@ class Client:
             Nothing
 
         Raises:
-            Exception if update call fails.
+            InputError if update call fails.
         """
-        query = makeUpdate(self.graphName, ref, newText)
-        debug(query)
-        response = requests.post(
-            self.apiUrl,
-            query,
-            headers=self.defaultHeader,
-        )
-        debug(response)
-        debug(response.content)
-        return json.loads(response.content)["success"]
+        try:
+            query = makeUpdate(self.graphName, ref, newText)
+            debug(query)
+            response = requests.post(
+                self.apiUrl,
+                query,
+                headers=self.defaultHeader,
+            )
+            debug(response)
+            debug(response.content)
+            return json.loads(response.content)["success"]
+        except KeyError as e:
+            raise InputError(query, "error updating roam block")
 
 
 def getQuery(graphName: str, tag: str) -> str:
@@ -131,6 +161,7 @@ def makeUpdate(graphName: str, ref: str, newText: str):
     return json.dumps(u)
 
 
+# TODO(chronologos) Delete before release
 r = Client(GRAPHNAME, APIKEY, APITOKEN, ROAMAPIURL)
-print(r.queryForTag("srs/cloze"))
-print(r.updateBlock("iqIV6RbYK", "pip"))
+print(list(r.queryForTag("srs/cloze")))
+# print(r.updateBlock("JTV1Al3Pe", "pip"))

@@ -3,10 +3,11 @@ import re
 from typing import Dict, Tuple, List
 from aqt import mw
 from aqt.utils import showInfo, showText
-from .roam.real import Client
+from .roam.real import Client, InputError
 from .roam.secrets import GRAPHNAME, APIKEY, APITOKEN, ROAMAPIURL
 
-DEBUG = False
+DEBUGWARNING = True
+DEBUGVERBOSE = False
 
 # Dict keys for config.json
 CONFIG_API_KEY_K = "apiKey"
@@ -18,7 +19,12 @@ CONFIG_CARD_TAGS_K = "tagMap"
 
 
 def debugInfo(s):
-    if DEBUG:
+    if DEBUGVERBOSE:
+        showInfo(s)
+
+
+def debugWarning(s):
+    if DEBUGWARNING:
         showInfo(s)
 
 
@@ -80,7 +86,6 @@ class Syncer:
                 )
                 return
             deck["mid"] = model["id"]
-            mw.col.decks.save(deck)
             for tag, field in cardCfg[CONFIG_CARD_TAGS_K].items():
                 # [(uid, text, timestamp)]
                 matchingBlocks = self.roamClient.queryForTag(tag)
@@ -88,6 +93,10 @@ class Syncer:
                     self.createOrUpdateNote(
                         {field: (block.text, block.uid)}, block.modifiedTime, deckID
                     )
+            mw.col.decks.save(deck)
+        mw.col.save()
+        if len(self.errorLog) > 0:
+            showAndThrowErrors(self.errorLog)
 
     def createOrUpdateNote(
         self, res: Dict[str, Tuple[str, str]], blockModifiedTime: str, did: int
@@ -98,9 +107,6 @@ class Syncer:
             queryByRef = "{}:{}".format(refField, uid)
             ids = mw.col.find_notes(queryByRef)
             if not ids:
-                # create
-                # TODO(chronologos): Collect all errors and display at the end
-                # PRIORITY = P2
                 debugInfo("card not found for query {}".format(queryByRef))
                 note = mw.col.newNote()
                 note[refField] = uid
@@ -110,8 +116,9 @@ class Syncer:
                 debugInfo("note found for query {} - {}".format(queryByRef, ids))
                 if len(ids) > 1:
                     showText(
-                        "should never happen: more than 1 note found with block ref {}".format(
-                            ids
+                        'should never happen: more than 1 note found with block ref {}. Please search for the duplicate and delete it. You can use the query "{}". After deleting, run Fabricus Sync again.'.format(
+                            ids,
+                            queryByRef,
                         )
                     )
                 debugInfo("note ids found = {}".format(ids))
@@ -119,7 +126,7 @@ class Syncer:
                 # update the card based on date
                 id = ids[0]
                 note = mw.col.getNote(id)
-                # Roam returns in nanosecs
+                # Roam returns in msecs
                 noteModifiedTime = int(note.mod) * 1000
                 debugInfo(
                     "noteModifiedTime {}, blockModifiedTime {}, (noteModifiedTime>blockModifiedTime)? {}".format(
@@ -140,11 +147,14 @@ class Syncer:
                             uid, note[textField]
                         )
                     )
-                    self.roamClient.updateBlock(
-                        uid, convertToRoamBlock(note[textField])
-                    )
+                    try:
+                        self.roamClient.updateBlock(
+                            uid, convertToRoamBlock(note[textField])
+                        )
+                    except InputError as e:
+                        self.logError(e)
                 else:
-                    debugInfo(
+                    debugWarning(
                         "block modified later: changing note {} in anki with text {}".format(
                             id, textInAnkiFormat
                         )
@@ -153,6 +163,13 @@ class Syncer:
                     note[textField] = textInAnkiFormat
                     note.flush()
                     debugInfo(note.__repr__())
+
+    def logError(self, t: str):
+        self.errorLog.append(t)
+
+
+# TODO(chronologos):
+# Priority 2 `Tools -> Fabricus: Clear Orphans`.
 
 
 def convertToCloze(s: str):

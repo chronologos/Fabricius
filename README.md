@@ -4,6 +4,8 @@ Fabricius is an Anki plugin that bidirectionally syncs between Roam and Anki. Th
 
 Connecting the east side of the city to Tiber Island since 62 BC, the Pons Fabricius (Fabricius Bridge) is the oldest bridge in Rome to survive to the present day. - Wikipedia
 
+**You are responsible for your data.** While we have tested this library as far as possible, there may still be bugs. Ideally, you should keep backups of both Roam and Anki data.
+
 ## Getting started
 You need to define a `config.json` as well as custom note type(s) that will be used by the plugin. As a recommended starter configuration, we recommend that you use cloze notes:
 
@@ -92,7 +94,9 @@ For a given config:
 }
 ```
 
-we will expect all the fields (specified as values in `tagMap`) to exist. In addition `{field}UID` must also exist as a field. This allows the plugin to track which field in the Anki note maps to which Roam block.
+we will expect all the fields (specified as values in `tagMap`) to exist in the given model. In addition `{field}UID` must also exist as a field. This allows the plugin to track which field in the Anki note maps to which Roam block.
+
+Roam is the source of truth for which notes should exist. If the block uid disappears from Roam, the corresponding note in Anki will be orphaned. This will have to be deleted via `Tools -> Fabricus: Clear Orphans`.
 
 1. Plugin pulls all relevant (block, modification date) based on configured tags from Roam.
 2. If the card does not exist in anki, create a new card
