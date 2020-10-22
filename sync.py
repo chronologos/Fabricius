@@ -4,7 +4,6 @@ from typing import Dict, Tuple, List
 from aqt import mw
 from aqt.utils import showInfo, showText
 from .roam.real import Client, InputError
-from .roam.secrets import GRAPHNAME, APIKEY, APITOKEN, ROAMAPIURL
 from .tools.markdown2.lib.markdown2 import markdown
 
 DEBUGWARNING = True
@@ -13,6 +12,8 @@ DEBUGVERBOSE = False
 # Dict keys for config.json
 CONFIG_API_KEY_K = "apiKey"
 CONFIG_API_TOKEN_K = "apiToken"
+CONFIG_GRAPH_NAME_K = "graphName"
+CONFIG_API_URL_K = "roamAPIUrl"
 CONFIG_CARD_K = "cards"
 CONFIG_CARD_MODEL_K = "model"
 CONFIG_CARD_DECK_K = "deck"
@@ -40,7 +41,13 @@ class Syncer:
     def __init__(self):
         config = mw.addonManager.getConfig(__name__)
         errors = []
-        for k in [CONFIG_API_KEY_K, CONFIG_API_TOKEN_K, CONFIG_CARD_K]:
+        for k in [
+            CONFIG_API_KEY_K,
+            CONFIG_API_TOKEN_K,
+            CONFIG_GRAPH_NAME_K,
+            CONFIG_API_URL_K,
+            CONFIG_CARD_K,
+        ]:
             if not k in config:
                 errors.append('did not find required key "{}" in config.json'.format(k))
         showAndThrowErrors(errors)
@@ -54,8 +61,12 @@ class Syncer:
                     )
         showAndThrowErrors(errors)
         self.errorLog = []
-        # TODO(chronologos) before releasing, use key, token and graphname from config
-        self.roamClient = Client(GRAPHNAME, APIKEY, APITOKEN, ROAMAPIURL)
+        self.roamClient = Client(
+            config[CONFIG_GRAPH_NAME_K],
+            config[CONFIG_API_KEY_K],
+            config[CONFIG_API_TOKEN_K],
+            config[CONFIG_API_URL_K],
+        )
 
     # idea is to build a single query that will get all relevant blocks?
     # or is it possible that there will be too much data for a single api call?
@@ -183,6 +194,7 @@ def convertToRoamBlock(s: str):
     res = re.sub(r"<p>", "", res)
     res = re.sub(r"</p>", "\n", res)
     return res.strip()
+
 
 def basicHtmlToMarkdown(s: str):
     s = re.sub(r"<strong>", "**", s)

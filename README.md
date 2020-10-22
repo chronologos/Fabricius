@@ -77,6 +77,7 @@ In [[C]], {{c2::indirect references}} to variables are done via {{c1::[[pointers
 7. Support custom note types (non-cloze)
 8. Formatting of notes (to test: what happens to formatting? in roam? in anki?)
    1. 2020-10-22 - added simple formatting support (bidirectional conversion between markdown (roam) and html (anki))
+9. Handle links / block refs in roam
 
 ## Limitations
 - If cloze deletions are removed from Roam, the corresponding cloze card needs to be emptied manually in Anki after syncing (Tools -> Empty Cards...)
