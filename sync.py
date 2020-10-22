@@ -5,6 +5,7 @@ from aqt import mw
 from aqt.utils import showInfo, showText
 from .roam.real import Client, InputError
 from .roam.secrets import GRAPHNAME, APIKEY, APITOKEN, ROAMAPIURL
+from .tools.markdown2.lib.markdown2 import markdown
 
 DEBUGWARNING = True
 DEBUGVERBOSE = False
@@ -162,7 +163,7 @@ class Syncer:
                     # change note
                     note[textField] = textInAnkiFormat
                     note.flush()
-                    debugInfo(note.__repr__())
+                    debugWarning(note.__repr__())
 
     def logError(self, t: str):
         self.errorLog.append(t)
@@ -173,13 +174,25 @@ class Syncer:
 
 
 def convertToCloze(s: str):
-    res = re.sub(r"{\s*c(\d*):([^}]*)}", r"{{c\g<1>::\g<2>}}", s)
+    res = markdown(re.sub(r"{\s*c(\d*):([^}]*)}", r"{{c\g<1>::\g<2>}}", s))
     return res
 
 
 def convertToRoamBlock(s: str):
-    res = re.sub(r"{{c(\d*)::([^}]*)}}", r"{c\g<1>:\g<2>}", s)
-    return res
+    res = basicHtmlToMarkdown(re.sub(r"{{c(\d*)::([^}]*)}}", r"{c\g<1>:\g<2>}", s))
+    res = re.sub(r"<p>", "", res)
+    res = re.sub(r"</p>", "\n", res)
+    return res.strip()
+
+def basicHtmlToMarkdown(s: str):
+    s = re.sub(r"<strong>", "**", s)
+    s = re.sub(r"</strong>", "**", s)
+    s = re.sub(r"</b>", "**", s)
+    s = re.sub(r"<b>", "**", s)
+    s = re.sub(r"<p>", "", s)
+    s = re.sub(r"</p>", "\n", s)
+    s.strip()
+    return s
 
 
 def refFieldFromTextField(s):

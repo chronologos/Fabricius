@@ -1,0 +1,3 @@
+[submodule "tools/markdown2"]
+	path = tools/markdown2
+	url = https://github.com/trentm/python-markdown2.git

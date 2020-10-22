@@ -4,8 +4,15 @@
     "cards": [
         {
             "model": "ClozeRoam",
-            "deck": "Default",
+            "deck": "Default2",
             "tagMap": {"srs/cloze":"Text"}
+        },
+        {
+            "model": "ClozeRoam2",
+            "deck": "Default3",
+            "tagMap": {
+                "srs/cloze2": "Text"
+            }
         }
     ]
 }
