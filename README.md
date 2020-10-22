@@ -64,24 +64,10 @@ resulting card in anki
 In [[C]], {{c2::indirect references}} to variables are done via {{c1::[[pointers]]}} #srs
 ```
 
-## Roadmap
-1. Cloze bidirectional sync e2e prototype [DONE - 2020-10-04]
-2. Handle edge cases
-   1. Probably use roam as source of truth. block refs might change, entire blocks may be deleted. What is the behaviour then? [IN_PROGRESS - 2020-10-11]
-3. Increase performance and reduce API usage - batch updates, batch queries. [DONE - 2020-10-11]
-4. Automatic sync / orphan cleanup using hooks
-   1. Orphans happen when roam blocks are deleted
-5. Sync stats
-   1. Depends on how Roam API evolves. 
-6. Add a link to the relevant roam block for each field.
-7. Support custom note types (non-cloze)
-8. Formatting of notes (to test: what happens to formatting? in roam? in anki?)
-   1. 2020-10-22 - added simple formatting support (bidirectional conversion between markdown (roam) and html (anki))
-9. Handle links / block refs in roam
-
 ## Limitations
 - If cloze deletions are removed from Roam, the corresponding cloze card needs to be emptied manually in Anki after syncing (Tools -> Empty Cards...)
 - The identity of a note in Anki is based on the block ID in roam. If the block ID changes, you will lose the review schedule of the card. Consequently, this means you need to be careful not to delete blocks with SR prompts in them.
+- Sync when deck browser is open may cause failure to sync from anki to roam.
 
 ## Design Notes
 
