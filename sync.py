@@ -86,8 +86,6 @@ class Syncer:
                         modelName
                     )
                 )
-                # TODO(chronologos): Add option to auto-create model.
-                # PRIORITY = P4
                 return
             deck = mw.col.decks.get(deckID, default=False)
             if not deck:
@@ -180,31 +178,36 @@ class Syncer:
         self.errorLog.append(t)
 
 
-# TODO(chronologos):
-# Priority 2 `Tools -> Fabricus: Clear Orphans`.
-
-
 def convertToCloze(s: str):
-    res = markdown(re.sub(r"{\s*c(\d*):([^}]*)}", r"{{c\g<1>::\g<2>}}", s))
+    res = re.sub(r"{\s*c(\d*):([^}]*)}", r"{{c\g<1>::\g<2>}}", s)
+    basicMarkdownToHtml(res)
     return res
 
 
 def convertToRoamBlock(s: str):
-    res = basicHtmlToMarkdown(re.sub(r"{{c(\d*)::([^}]*)}}", r"{c\g<1>:\g<2>}", s))
-    res = re.sub(r"<p>", "", res)
-    res = re.sub(r"</p>", "\n", res)
-    return res.strip()
+    res = re.sub(r"{{c(\d*)::([^}]*)}}", r"{c\g<1>:\g<2>}", s)
+    res = basicHtmlToMarkdown(res)
+    return res
 
 
+# Markdown <-> HTML conversion using regex is hacky but the best we can do for now.
+# 1 hour investigation with html->md and md->html libraries proved unsuccessful with too many edge cases.
+# Main issue is that both fns need to be "inverses" otherwise cards will start to get mis-formatted.
 def basicHtmlToMarkdown(s: str):
-    s = re.sub(r"<strong>", "**", s)
-    s = re.sub(r"</strong>", "**", s)
-    s = re.sub(r"</b>", "**", s)
+    # TODO(chronologos): Probably shouldn't be using regex here.
     s = re.sub(r"<b>", "**", s)
-    s = re.sub(r"<p>", "", s)
-    s = re.sub(r"</p>", "\n", s)
-    s.strip()
+    s = re.sub(r"</b>", "**", s)
+    s = re.sub(r"<i>", "__", s)
+    s = re.sub(r"</i>", "__", s)
     return s
+
+
+def basicMarkdownToHtml(s: str):
+    # ungreedy match
+    res = re.sub(r"\*\*(.*?)\*\*", r"<b>\g<1></b>", s)
+    # ungreedy match
+    res = re.sub(r"__(.*?)__", r"<i>\g<1></i>", res)
+    return res
 
 
 def refFieldFromTextField(s):
