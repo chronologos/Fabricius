@@ -1,12 +1,12 @@
 import requests
 import json
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple, Union
-from .secrets import GRAPHNAME, APIKEY, APITOKEN, ROAMAPIURL
+from secrets import GRAPHNAME, APIKEY, APITOKEN, ROAMAPIURL
 
 # i would have used edn_format but Anki plugins should be low-dependency since Anki does not come with all of Python's built-in packages.
 
 # for testing only
-DEBUG = False
+DEBUG = True
 
 
 def debug(s):
@@ -46,20 +46,21 @@ def makeHeaders(apiKey: str, apiToken: str):
 
 
 def trunc(s: str):
-    if len(s) < 10:
+    if len(s) < 20:
         return s
-    return "{}...".format(s[0:10])
+    return "{}...".format(s[0:20])
 
 
 class Block:
-    def __init__(self, uid="", text="", modifiedTime=0):
+    def __init__(self, uid="", text="", modifiedTime=0, children=[]):
         self.uid = uid
         self.text = text
         # As of 2020-10-11, this is in unix epoch milliseconds.
         self.modifiedTime = modifiedTime
+        self.children = children
 
     def __repr__(self):
-        return "(({} - {} - {}))".format(self.uid, trunc(self.text), self.modifiedTime)
+        return "((uid={} - text={} - mod={} - children={}))".format(self.uid, trunc(self.text), self.modifiedTime, str(self.children))
 
 
 queryTmpl = """[:find ?uid ?t ?time\
@@ -69,6 +70,13 @@ queryTmpl = """[:find ?uid ?t ?time\
  [?refs :block/uid ?uid]\
  [?refs :block/string ?t]\
  [?refs :edit/time ?time]]\
+"""
+
+
+childrenQueryTmpl = """[:find (pull ?refs [:node/title :block/uid :block/string :block/order {{:block/children ...}}])\
+ :where \
+ [?page :node/title \"{}\"]\
+ [?refs :block/refs ?page]]\
 """
 
 
@@ -104,6 +112,47 @@ class Client:
             debug(response.content)
             res = json.loads(response.content)["success"]
             resBlocks = map(lambda l: Block(l[0], l[1], l[2]), res)
+            return resBlocks
+        except KeyError as e:
+            raise InputError(query, "error querying for tag")
+
+
+    def blocksFromJSON(self, blocksJson):
+        parents = []
+        for blockJson in blocksJson:
+            # debug(blockJson, type(blockJson))
+            # modified time?
+            b = Block(blockJson["block/uid"], blockJson["block/string"], 0, [])
+            if "block/children" in blockJson:
+                b.children = self.blocksFromJSON(blockJson["block/children"])
+            parents.append(b)
+        return parents
+
+    # TODO(chronologos): WIP, walk tree!
+    def queryForChildren(self, tag: str) -> List[Block]:
+        """Queries for all Roam blocks and their children that have the given tag. As of 2020-10-11, this does not match the tag if it is in a reference or embed (and this is good).
+
+        Args:
+            tag: Tag to search for.
+
+        Returns:
+            List of blocks.
+
+        Raises:
+            InputError if query call fails.
+        """
+        try:
+            query = childrenQuery(self.graphName, tag)
+            debug(query)
+            response = requests.post(
+                self.apiUrl,
+                query,
+                headers=self.defaultHeader,
+            )
+            debug(response)
+            debug(response.content)
+            res = json.loads(response.content)["success"]
+            resBlocks = map(self.blocksFromJSON, res)
             return resBlocks
         except KeyError as e:
             raise InputError(query, "error querying for tag")
@@ -146,6 +195,17 @@ def getQuery(graphName: str, tag: str) -> str:
     return json.dumps(q)
 
 
+def childrenQuery(graphName: str, tag: str) -> str:
+    q = {
+        "action": "q",
+        "graph-name": "",
+        "query": [],
+    }
+    q["query"] = childrenQueryTmpl.format(tag)
+    q["graph-name"] = graphName
+    return json.dumps(q)
+
+
 def makeUpdate(graphName: str, ref: str, newText: str):
     u = {
         "action": "update-block",
@@ -163,5 +223,8 @@ def makeUpdate(graphName: str, ref: str, newText: str):
 
 # TODO(chronologos) Delete before release
 r = Client(GRAPHNAME, APIKEY, APITOKEN, ROAMAPIURL)
-print(list(r.queryForTag("srs/cloze")))
+# print(list(r.queryForTag("srs/cloze")))
+r = list(r.queryForChildren("srs/cloze"))
+print("\n", r)
+# -> WIP
 # print(r.updateBlock("JTV1Al3Pe", "pip"))

@@ -180,7 +180,7 @@ class Syncer:
 
 def convertToCloze(s: str):
     res = re.sub(r"{\s*c(\d*):([^}]*)}", r"{{c\g<1>::\g<2>}}", s)
-    basicMarkdownToHtml(res)
+    res = basicMarkdownToHtml(res)
     return res
 
 
@@ -193,12 +193,13 @@ def convertToRoamBlock(s: str):
 # Markdown <-> HTML conversion using regex is hacky but the best we can do for now.
 # 1 hour investigation with html->md and md->html libraries proved unsuccessful with too many edge cases.
 # Main issue is that both fns need to be "inverses" otherwise cards will start to get mis-formatted.
+# Issue: now there is no easy way to write these literals in flashcard blocks.
 def basicHtmlToMarkdown(s: str):
-    # TODO(chronologos): Probably shouldn't be using regex here.
-    s = re.sub(r"<b>", "**", s)
-    s = re.sub(r"</b>", "**", s)
-    s = re.sub(r"<i>", "__", s)
-    s = re.sub(r"</i>", "__", s)
+    s = s.replace("<b>", "**")
+    s = s.replace("</b>", "**")
+    s = s.replace("<i>", "__")
+    s = s.replace("</i>", "__")
+    s = s.replace("&nbsp;", " ")
     return s
 
 
