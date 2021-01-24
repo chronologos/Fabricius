@@ -1,4 +1,4 @@
-# Fabricius
+# Fabricius (roam-to-anki v2)
 _Updated: 2021-01-24_
 
 NOTE 🍩 - This requires access to the Roam Alpha API for now. If you have access to that, I am happy to accept alpha testers.
