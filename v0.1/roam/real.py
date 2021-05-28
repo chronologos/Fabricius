@@ -1,7 +1,7 @@
 import requests
 import json
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple, Union
-from secrets import GRAPHNAME, APIKEY, APITOKEN, ROAMAPIURL
+from .secrets import GRAPHNAME, APIKEY, APITOKEN, ROAMAPIURL
 
 # i would have used edn_format but Anki plugins should be low-dependency since Anki does not come with all of Python's built-in packages.
 
