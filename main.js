@@ -1,7 +1,7 @@
 /* eslint-disable max-len */
 /* eslint-disable no-multi-str */
 
-/* Fabricius v0.3
+/* Fabricius v1.1
  * Copyright (c) 2020 Ian Tay
  *
 
@@ -15,15 +15,24 @@
  */
 
 // Configure sync using these constants
+// A block tagged with CLOZE_TAG is synced.
 const CLOZE_TAG = 'srs/cloze';
 // The Anki deck to be synced to
 const ANKI_DECK_FOR_CLOZE_TAG = 'Default';
 // The Anki model (note type) that will be synced
 const ANKI_MODEL_FOR_CLOZE_TAG = 'ClozeRoam';
+
 // The note field that will contain the clozed text
 const ANKI_FIELD_FOR_CLOZE_TEXT = 'Text';
 // The note field that will store the UID (used by the code to associate the Anki note with the Roam block)
 const ANKI_FIELD_FOR_CLOZE_TAG = 'TextUID';
+
+
+// Advanced
+// A block tagged with GROUPED_CLOZE_TAG is not synced, but its children, if they have clozes, are.
+const GROUPED_CLOZE_TAG = 'srs/cloze-g';
+// The block tagged with GROUPED_CLOZE_TAG will be synced to this field.
+const ANKI_FIELD_FOR_GROUP_HEADER = 'Back Extra';
 
 // --- internals below this ---
 const ANKI_CONNECT_VERSION = 6;
@@ -36,17 +45,14 @@ const NO_NID = -1;
 
 // Core sync logic
 const syncNow = async () => {
-  const c = window.roamAlphaAPI.q('[\
-                        :find (pull ?referencingBlock [*]) \
-                        :in $ ?pagetitle\
-                        :where \
-                            [?referencingBlock :block/refs ?referencedPage]\
-                            [?referencedPage :node/title ?pagetitle]\
-                        ]', CLOZE_TAG);
-
   // STEP 1: Get all blocks that reference srs/cloze
   // Useful attributes in these blocks: uid, string, time (unix epoch)
-  const blocks = c.map((b) => b[0]);
+  const singleBlocks = await pullBlocksWithTag(CLOZE_TAG);
+  // groupBlocks are augmented with information from their parent.
+  const groupBlocks = await pullBlocksUnderTag(GROUPED_CLOZE_TAG);
+  const groupClozeBlocks = groupBlocks.filter(blockContainsCloze);
+  // console.log(JSON.stringify(groupClozeBlocks, null, 2));
+  const blocks = groupClozeBlocks.concat(singleBlocks);
   const blockWithNid = await Promise.all(blocks.map((b) => processSingleBlock(b)));
   const blocksWithNids = blockWithNid.filter(([_, nid]) => nid != NO_NID);
   const blocksWithNoNids = blockWithNid.filter(([_, nid]) => nid == NO_NID).map((b) => b[0]);
@@ -87,7 +93,7 @@ const syncNow = async () => {
 };
 
 // UI logic
-const renderAnkiButton = () => {
+const renderFabriciusButton = () => {
   const syncAnkiButton = document.createElement('span');
   syncAnkiButton.id = 'sync-anki-button-span';
   syncAnkiButton.classList.add('bp3-popover-wrapper');
@@ -117,9 +123,9 @@ if (document.getElementById('sync-anki-button-span') != null) {
 }
 console.log('adding anki sync');
 try {
-  renderAnkiButton();
+  renderFabriciusButton();
 } catch (e) {
-  window.requestAnimationFrame(renderAnkiButton);
+  window.requestAnimationFrame(renderFabriciusButton);
 }
 
 // Helpers
@@ -155,6 +161,37 @@ const invokeAnkiConnect = (action, version, params = {}) => {
   });
 };
 
+const pullBlocksWithTag = async (tag) => {
+  const c = window.roamAlphaAPI.q('[\
+                        :find (pull ?referencingBlock [*]) \
+                        :in $ ?pagetitle\
+                        :where \
+                            [?referencingBlock :block/refs ?referencedPage]\
+                            [?referencedPage :node/title ?pagetitle]\
+                        ]', tag);
+
+  return c.map((b) => b[0]);
+};
+
+
+const pullBlocksUnderTag = async (tag) => {
+  // Returns array of [childBlock, parentBlockWithTag]
+  // Looks for both direct and indirect children.
+  const c = window.roamAlphaAPI.q('[\
+                        :find (pull ?childBlock [*]) (pull ?parentBlock [*]) \
+                        :in $ ?pagetitle\
+                        :where \
+                            [?parentBlock :block/refs ?referencedPage]\
+                            [?childBlock :block/parents ?parentBlock]\
+                            [?referencedPage :node/title ?pagetitle]\
+                        ]', tag);
+  // augment child with info from parent
+  return c.map((b) => {
+    const bb = b[0];
+    bb['parentBlock'] = b[1];
+    return bb;
+  });
+};
 
 const processSingleBlock = async (block) => {
   console.log('searching for block ' + block.uid);
@@ -226,10 +263,44 @@ const updateBlock = async (blockWithNote) => {
   return updateNote(blockWithNote);
 };
 
+// Given an input or the current page, returns map of attributes.
+const getAttrUnderBlock = (blockUid) => {
+  return getAttrConfigFromQuery(
+      `[:find (pull ?e [*]) :where [?e :block/uid "${blockUid}"] ]`,
+  );
+};
+
+// This function is handpicked from David Vargas' roam-client https://github.com/dvargas92495/roam-client
+// It is used to grab configuration from a Roam page.
+const getAttrFromQuery = (query) => {
+  const pageResults = window.roamAlphaAPI.q(query);
+  if (pageResults.length === 0 || !pageResults[0][0].attrs) {
+    return {};
+  }
+
+  const configurationAttrRefs = pageResults[0][0].attrs.map(
+      (a) => a[2].source[1],
+  );
+  const entries = configurationAttrRefs.map(
+      (r) =>
+        window.roamAlphaAPI
+            .q(
+                `[:find (pull ?e [:block/string]) :where [?e :block/uid "${r}"] ]`,
+            )[0][0]
+            .string?.split('::')
+            .map(toAttributeValue) || [r, 'undefined'],
+  );
+  return Object.fromEntries(entries);
+};
+
 const blockToAnkiSyntax = (block) => {
   const fieldsObj = {};
   fieldsObj[ANKI_FIELD_FOR_CLOZE_TEXT] = convertToCloze(block.string);
   fieldsObj[ANKI_FIELD_FOR_CLOZE_TAG] = noteMetadata(block);
+  // TODO This means parent is only updated if child is updated.
+  if ('parentBlock' in block) {
+    fieldsObj[ANKI_FIELD_FOR_GROUP_HEADER] = block.parentBlock.string;
+  }
   return {
     'deckName': ANKI_DECK_FOR_CLOZE_TAG,
     'modelName': ANKI_MODEL_FOR_CLOZE_TAG,
@@ -239,6 +310,11 @@ const blockToAnkiSyntax = (block) => {
 
 const noteMetadata = (block) => {
   return JSON.stringify({'block_uid': block.uid, 'block_time': block.time, 'schema_version': 1});
+};
+
+const blockContainsCloze = (block) => {
+  const found = block.string.match(/c(\d*):([^}]*)}/g);
+  return (found != null && found.length != 0);
 };
 
 // String manipulation functions

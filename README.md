@@ -33,8 +33,25 @@ and TextUID = `f-123`.
 - An Anki note type named `ClozeRoam` with fields `Text` and `TextUID` has to exist in a deck named `Default`.
 - Please see [Anki docs](https://docs.ankiweb.net/templates/generation.html?highlight=cloze#cloze-templates) for more info on how a cloze note type needs to be configured (easiest is to clone the built-in Cloze note type).
 
+## Advanced: Group Tags
+
+Group tags do 2 things:
+1. Any child block under a block with a group tag is considered a cloze, unless there are no cloze marks `{c1:...}` on it.
+2. Clozes generated from said child blocks automatically include context from the parent block.
+
+So something like this in Roam:
+```text
+    - Caffeine #srs/cloze-g
+        - Tastes good
+        - Is an {c1:adenosine} antagonist.
+        - Has a half-life of {c1:5} hours.
+```
+
+Would create 2 cloze notes (skipping the first child). Both cloze notes will have `Caffeine #srs/cloze-g` populated in the `ANKI_FIELD_FOR_GROUP_HEADER` field.
+
 ## Caveats
 - Don't edit the sync metadata on the Anki note.
+- The Roam block UID is used to identify the corresponding note in Anki. Avoid taking actions which cause the block UID of a Roam block to change.
 - You can't create a new note in Anki and sync it to Roam.
 - There is no garbage collection for unused notes in Anki (yet).
 - If the same uid is updated in both Roam and Anki, Roam will be taken as the source of truth.
