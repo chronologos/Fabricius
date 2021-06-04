@@ -116,7 +116,7 @@ const batchAddNotes = async (blocksWithNoNids) => {
 const blockToAnkiSyntax = (block) => {
   const fieldsObj = {};
   fieldsObj[ANKI_FIELD_FOR_CLOZE_TEXT] = convertToCloze(block.string);
-  fieldsObj[ANKI_DECK_FOR_CLOZE_TAG] = block.uid;
+  fieldsObj[ANKI_FIELD_FOR_CLOZE_TAG] = block.uid;
   return {
     "deckName": ANKI_DECK_FOR_CLOZE_TAG,
     "modelName": ANKI_MODEL_FOR_CLOZE_TAG,
