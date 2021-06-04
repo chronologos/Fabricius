@@ -90,7 +90,8 @@ const basicHtmlToMarkdown = (s) => {
 
 const processSingleBlock = async (block) => {
   console.log('searching for block ' + block.uid);
-  const nid = await invokeAnkiConnect(ANKI_CONNECT_FINDNOTES, ANKI_CONNECT_VERSION, { 'query': `${ANKI_FIELD_FOR_CLOZE_TAG}:${block.uid} AND note:${ANKI_MODEL_FOR_CLOZE_TAG}` });
+  // TODO: should do a more exact structural match on the block uid here, but a collision *seems* unlikely.
+  const nid = await invokeAnkiConnect(ANKI_CONNECT_FINDNOTES, ANKI_CONNECT_VERSION, { 'query': `${ANKI_FIELD_FOR_CLOZE_TAG}:re:${block.uid} AND note:${ANKI_MODEL_FOR_CLOZE_TAG}` });
   if (nid.length == 0) {
     // create card in Anki
     return [block, NO_NID]
@@ -100,6 +101,18 @@ const processSingleBlock = async (block) => {
   return [block, nid[0]];
 }
 
+// Returns anki notes with the given note IDs.
+/*
+ example output: 
+ [{ "noteId": 1603364308368, 
+    "tags": [], 
+    "fields": { 
+        "Text": { "value": "observations1234: <i>when1</i> a bsslock is {{c1::modified}} in [roam](((-_bUL8eUa))) #srs/cloze", "order": 0 }, 
+        "TextUID": { "value": "f9huaS-67", "order": 1 },
+        "Back Extra": { "value": "", "order": 2 } }, 
+    "modelName": "ClozeRoam",
+    "cards": [1603364308368] }, ...]
+ */
 const batchFindNotes = async (blocksWithNids) => {
   // update older using newer (but no timestamp in anki connect?)
   const nids = blocksWithNids.map(b => b[1]);
@@ -116,7 +129,7 @@ const batchAddNotes = async (blocksWithNoNids) => {
 const blockToAnkiSyntax = (block) => {
   const fieldsObj = {};
   fieldsObj[ANKI_FIELD_FOR_CLOZE_TEXT] = convertToCloze(block.string);
-  fieldsObj[ANKI_FIELD_FOR_CLOZE_TAG] = block.uid;
+  fieldsObj[ANKI_FIELD_FOR_CLOZE_TAG] = JSON.stringify({ "block_uid": block.uid, "block_time": block.time });
   return {
     "deckName": ANKI_DECK_FOR_CLOZE_TAG,
     "modelName": ANKI_MODEL_FOR_CLOZE_TAG,
@@ -139,12 +152,30 @@ const syncNow = async () => {
   const blockNid = await Promise.all(blocks.map(b => processSingleBlock(b)));
   const blocksWithNids = blockNid.filter(([_, nid]) => nid != NO_NID);
   const blocksWithNoNids = blockNid.filter(([_, nid]) => nid == NO_NID).map(b => b[0]);
-  console.log(blocksWithNoNids);
+  console.log("blocks with no nids" + JSON.stringify(blocksWithNoNids));
   const existingNotes = await batchFindNotes(blocksWithNids);
-  console.log("existing notes" + JSON.stringify(existingNotes));
-  console.log("no nids" + JSON.stringify(blocksWithNoNids));
+
+  // for blocks that exist in both Anki and Roam, do a comparison.
+  const blockWithNote = blocksWithNids.map(function (block, i) {
+    const _existingNote = existingNotes[i];
+    const noteMetadata = JSON.parse(_existingNote["fields"][ANKI_FIELD_FOR_CLOZE_TAG]["value"]);
+    _existingNote.block_time = noteMetadata["block_time"];
+    _existingNote.block_uid = noteMetadata["block_uid"];
+    return { "nid": block[1], "block": block[0], "note": _existingNote };
+  });
+
+  // Toggle this on for debugging only
+  console.log("blockWithNote array: " + JSON.stringify(blockWithNote, null, 2));
+
+  const newerInRoam = blockWithNote.filter(x => x.block.time > x.note.block_time);
+  const newerInAnki = blockWithNote.filter(x => x.block.time <= x.note.block_time && convertToCloze(x.block.string) != x.note["fields"][ANKI_FIELD_FOR_CLOZE_TEXT]["value"]);
+  console.log(blockToAnkiSyntax(newerInAnki[0].block));
+  console.log(newerInAnki[0].note["fields"][ANKI_FIELD_FOR_CLOZE_TEXT]["value"]);
+  console.log("total synced blocks " + blocks.length)
+  console.log("newer in roam " + newerInRoam.length)
+  console.log("newer in anki " + newerInAnki.length)
   const results = await batchAddNotes(blocksWithNoNids);
-  console.log(results);
+  console.log(results); // should be an array of nulls if there are no errors
 }
 
 const renderAnkiButton = () => {
