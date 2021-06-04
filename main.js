@@ -25,16 +25,16 @@ const ANKI_MODEL_FOR_CLOZE_TAG = 'ClozeRoam';
 // The note field that will contain the clozed text
 const ANKI_FIELD_FOR_CLOZE_TEXT = 'Text';
 // The note field that will store the UID (used by the code to associate the Anki note with the Roam block)
-const ANKI_FIELD_FOR_CLOZE_TAG = 'TextUID';
-
+const ANKI_FIELD_FOR_CLOZE_TAG = 'Metadata';
 
 // Advanced
 // A block tagged with GROUPED_CLOZE_TAG is not synced, but its children, if they have clozes, are.
 const GROUPED_CLOZE_TAG = 'srs/cloze-g';
 // The block tagged with GROUPED_CLOZE_TAG will be synced to this field.
-const ANKI_FIELD_FOR_GROUP_HEADER = 'Back Extra';
+const ANKI_FIELD_FOR_GROUP_HEADER = 'Extra';
 
 // --- internals below this ---
+const METADATA_SCHEMA_VERSION = 2;
 const ANKI_CONNECT_VERSION = 6;
 const ANKI_CONNECT_FINDNOTES = 'findNotes';
 const ANKI_CONNECT_NOTESINFO = 'notesInfo';
@@ -309,7 +309,7 @@ const blockToAnkiSyntax = (block) => {
 };
 
 const noteMetadata = (block) => {
-  return JSON.stringify({'block_uid': block.uid, 'block_time': block.time, 'schema_version': 1});
+  return JSON.stringify({'block_uid': block.uid, 'block_time': block.time, 'schema_version': METADATA_SCHEMA_VERSION, 'roam_page': block.page.id});
 };
 
 const blockContainsCloze = (block) => {

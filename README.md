@@ -26,11 +26,11 @@ we get this note in Anki with Text =
 In [[C]], we can have {{c2::indirect references}} to variables using {{c1::[[pointers]]}} #srs/cloze
 ```
 
-and TextUID = `f-123`.
+and Metadata = `f-123`.
 
 - This assumes the default configuration of main.js
 - Note the modified cloze syntax, since Roam reserves `{{}}` and `::` for internal use. 
-- An Anki note type named `ClozeRoam` with fields `Text` and `TextUID` has to exist in a deck named `Default`.
+- An Anki note type named `ClozeRoam` with fields `Text` and `Metadata` has to exist in a deck named `Default`.
 - Please see [Anki docs](https://docs.ankiweb.net/templates/generation.html?highlight=cloze#cloze-templates) for more info on how a cloze note type needs to be configured (easiest is to clone the built-in Cloze note type).
 
 ## Advanced: Group Tags
