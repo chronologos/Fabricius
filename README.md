@@ -2,7 +2,7 @@
 
 > _Connecting the east side of the city to Tiber Island since 62 BC, the Pons Fabricius (Fabricius Bridge) is the oldest bridge in Rome to survive to the present day. - Wikipedia_
 
-*Fabricius* is an Anki plugin that bidirectionally syncs with Roam Research. The goal is to have robust, fast syncing for the most common use-cases. *NOTE*: Right now it only supports uni-directional sync (roam->anki).
+*Fabricius* is an Anki plugin that bidirectionally syncs with Roam Research. The goal is to have robust, fast syncing for the most common use-cases.
 
 **Disclaimer:** This software is provided as-is and you are responsible for your data. While we have tested this library as far as possible, there may still be bugs. Ideally, you should keep backups of both Roam and Anki data.
 
@@ -31,4 +31,8 @@ and TextUID = `f-123`.
 - Note the modified cloze syntax, since Roam reserves `{{}}` and `::` for internal use. 
 - An Anki note type named `ClozeRoam` with fields `Text` and `TextUID` has to exist in a deck named `Default`.
 - Please see [Anki docs](https://docs.ankiweb.net/templates/generation.html?highlight=cloze#cloze-templates) for more info on how a cloze note type needs to be configured (easiest is to clone the built-in Cloze note type).
+
+## Caveats
+- You can't create a new note in Anki and sync it to Roam.
+- No garbage collection for unused notes in Anki (yet).
 

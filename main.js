@@ -2,7 +2,9 @@
  * Copyright (c) 2020 Ian Tay
  * This requires Anki and the AnkiConnect extension. Anki must be running.
  * You must configure ankiconnect to allow cross-origin requests from https://roamresearch.com.
- * Go to Anki -> Tools -> Addons -> Anki Connect -> Config and amend `webCorsOriginList` 
+ * Go to Anki -> Tools -> Addons -> Anki Connect -> Config and amend `webCorsOriginList`
+ * 
+ * Please close the Anki browse screen when syncing.
  * 
  * eslint-disable max-len
  * eslint-disable no-unused-vars
@@ -24,6 +26,7 @@ const ANKI_CONNECT_VERSION = 6;
 const ANKI_CONNECT_FINDNOTES = 'findNotes';
 const ANKI_CONNECT_NOTESINFO = 'notesInfo';
 const ANKI_CONNECT_ADDNOTES = 'addNotes';
+const ANKI_CONNECT_UPDATENOTES = 'updateNoteFields';
 
 const NO_NID = -1;
 
@@ -54,7 +57,7 @@ const invokeAnkiConnect = (action, version, params = {}) => {
 
     xhr.open('POST', 'http://localhost:8765');
     // TODO
-    console.log(JSON.stringify({ action, version, params }));
+    // console.log(JSON.stringify({ action, version, params }));
     xhr.send(JSON.stringify({ action, version, params }));
   });
 };
@@ -114,22 +117,50 @@ const processSingleBlock = async (block) => {
     "cards": [1603364308368] }, ...]
  */
 const batchFindNotes = async (blocksWithNids) => {
-  // update older using newer (but no timestamp in anki connect?)
   const nids = blocksWithNids.map(b => b[1]);
-  console.log('query for nids ' + nids)
   const ankiNote = await invokeAnkiConnect(ANKI_CONNECT_NOTESINFO, ANKI_CONNECT_VERSION, { 'notes': nids });
   return ankiNote;
 };
 
-const batchAddNotes = async (blocksWithNoNids) => {
-  const newNotes = blocksWithNoNids.map(b => blockToAnkiSyntax(b));
+const batchAddNotes = async (blocks) => {
+  const newNotes = blocks.map(b => blockToAnkiSyntax(b));
   return invokeAnkiConnect(ANKI_CONNECT_ADDNOTES, ANKI_CONNECT_VERSION, { 'notes': newNotes });
+}
+
+const updateNote = async (blockWithNote) => {
+  const newNote = blockToAnkiSyntax(blockWithNote.block);
+  newNote.id = blockWithNote.note.noteId
+  delete newNote.deckName
+  delete newNote.modelName
+  return invokeAnkiConnect(ANKI_CONNECT_UPDATENOTES, ANKI_CONNECT_VERSION, { 'note': newNote });
+}
+
+// updateBlock mutates `blockWithNote`.
+const updateBlock = async (blockWithNote) => {
+  const noteText = blockWithNote.note.fields[ANKI_FIELD_FOR_CLOZE_TEXT]["value"];
+  const blockText = convertToRoamBlock(noteText);
+  // success? - boolean
+  const updateRes = window.roamAlphaAPI.updateBlock(
+    {
+      "block":
+      {
+        "uid": blockWithNote.block.uid,
+        "string": blockText
+      }
+    });
+  // The block will have a newer modified time than the Anki note. But we don't know what value it is. We query for it after waiting, and update the note in Anki.
+  await new Promise(r => setTimeout(r, 200));
+  const updateTime = window.roamAlphaAPI.q(`[ :find (pull ?e [ :edit/time ]) :where [?e :block/uid "${blockWithNote.block.uid}"]]`)[0][0].time;
+  // console.log(updateTime);
+  blockWithNote.block.time = updateTime;
+  blockWithNote.block.string = blockText;
+  return updateNote(blockWithNote)
 }
 
 const blockToAnkiSyntax = (block) => {
   const fieldsObj = {};
   fieldsObj[ANKI_FIELD_FOR_CLOZE_TEXT] = convertToCloze(block.string);
-  fieldsObj[ANKI_FIELD_FOR_CLOZE_TAG] = JSON.stringify({ "block_uid": block.uid, "block_time": block.time });
+  fieldsObj[ANKI_FIELD_FOR_CLOZE_TAG] = noteMetadata(block);
   return {
     "deckName": ANKI_DECK_FOR_CLOZE_TAG,
     "modelName": ANKI_MODEL_FOR_CLOZE_TAG,
@@ -137,6 +168,11 @@ const blockToAnkiSyntax = (block) => {
   };
 }
 
+const noteMetadata = (block) => {
+  return JSON.stringify({ "block_uid": block.uid, "block_time": block.time, "schema_version": 1 });
+}
+
+// Core sync logic
 const syncNow = async () => {
   const c = window.roamAlphaAPI.q('[\
                         :find (pull ?referencingBlock [*]) \
@@ -146,16 +182,16 @@ const syncNow = async () => {
                             [?referencedPage :node/title ?pagetitle]\
                         ]', CLOZE_TAG)
 
-  // Get all blocks that reference srs/cloze
-  // useful attributes in these blocks: uid, string, time (unix epoch)
+  // STEP 1: Get all blocks that reference srs/cloze
+  // Useful attributes in these blocks: uid, string, time (unix epoch)
   const blocks = c.map(b => b[0]);
-  const blockNid = await Promise.all(blocks.map(b => processSingleBlock(b)));
-  const blocksWithNids = blockNid.filter(([_, nid]) => nid != NO_NID);
-  const blocksWithNoNids = blockNid.filter(([_, nid]) => nid == NO_NID).map(b => b[0]);
-  console.log("blocks with no nids" + JSON.stringify(blocksWithNoNids));
+  const blockWithNid = await Promise.all(blocks.map(b => processSingleBlock(b)));
+  const blocksWithNids = blockWithNid.filter(([_, nid]) => nid != NO_NID);
+  const blocksWithNoNids = blockWithNid.filter(([_, nid]) => nid == NO_NID).map(b => b[0]);
   const existingNotes = await batchFindNotes(blocksWithNids);
 
-  // for blocks that exist in both Anki and Roam, do a comparison.
+  // STEP 2: For blocks that exist in both Anki and Roam, generate `blockWithNote`.
+  // The schema for `blockWithNote` is shown in `NOTES.md`.
   const blockWithNote = blocksWithNids.map(function (block, i) {
     const _existingNote = existingNotes[i];
     const noteMetadata = JSON.parse(_existingNote["fields"][ANKI_FIELD_FOR_CLOZE_TAG]["value"]);
@@ -165,19 +201,30 @@ const syncNow = async () => {
   });
 
   // Toggle this on for debugging only
-  console.log("blockWithNote array: " + JSON.stringify(blockWithNote, null, 2));
+  // console.log("blocks with no nids" + JSON.stringify(blocksWithNoNids));
+  // console.log("blockWithNote array: " + JSON.stringify(blockWithNote, null, 2));
 
+  // STEP 3: Compute diffs between Anki and Roam
   const newerInRoam = blockWithNote.filter(x => x.block.time > x.note.block_time);
   const newerInAnki = blockWithNote.filter(x => x.block.time <= x.note.block_time && convertToCloze(x.block.string) != x.note["fields"][ANKI_FIELD_FOR_CLOZE_TEXT]["value"]);
-  console.log(blockToAnkiSyntax(newerInAnki[0].block));
-  console.log(newerInAnki[0].note["fields"][ANKI_FIELD_FOR_CLOZE_TEXT]["value"]);
-  console.log("total synced blocks " + blocks.length)
-  console.log("newer in roam " + newerInRoam.length)
-  console.log("newer in anki " + newerInAnki.length)
+  console.log("[syncNow] total synced blocks " + blocks.length)
+  console.log("[syncNow] newer in roam " + newerInRoam.length)
+  console.log("[syncNow] newer in anki " + newerInAnki.length)
+
+  // STEP 4: Update Anki's outdated notes
+  const updateExistingInAnki = await Promise.all(newerInRoam.map(x => updateNote(x)));
+  console.log(updateExistingInAnki); // should be an array of nulls if there are no errors
+
+  // STEP 5: Update Roam's outdated blocks
+  const updateExistingInRoam = await Promise.all(newerInAnki.map(x => updateBlock(x)));
+  console.log(updateExistingInRoam); // should be an array of nulls if there are no errors
+
+  // STEP 6: Create new cards in Anki
   const results = await batchAddNotes(blocksWithNoNids);
   console.log(results); // should be an array of nulls if there are no errors
 }
 
+// UI logic
 const renderAnkiButton = () => {
   const syncAnkiButton = document.createElement('span');
   syncAnkiButton.id = 'sync-anki-button-span';
