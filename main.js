@@ -155,7 +155,6 @@ const invokeAnkiConnect = (action, version, params = {}) => {
     });
 
     xhr.open('POST', 'http://localhost:8765');
-    // TODO
     // console.log(JSON.stringify({ action, version, params }));
     xhr.send(JSON.stringify({action, version, params}));
   });
@@ -295,6 +294,7 @@ const getAttrFromQuery = (query) => {
 
 const blockToAnkiSyntax = (block) => {
   const fieldsObj = {};
+  // TODO: extract tags in a certain format. use namespaces.
   fieldsObj[ANKI_FIELD_FOR_CLOZE_TEXT] = convertToCloze(block.string);
   fieldsObj[ANKI_FIELD_FOR_CLOZE_TAG] = noteMetadata(block);
   // TODO This means parent is only updated if child is updated.
