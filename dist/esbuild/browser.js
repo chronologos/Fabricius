@@ -77,12 +77,21 @@
     return c.map((b) => b[0]);
   });
   var pullBlocksUnderTag = (tag) => __async(void 0, null, function* () {
-    const c = window.roamAlphaAPI.q("[                        :find (pull ?childBlock [*]) (pull ?parentBlock [*])                         :in $ ?pagetitle                        :where                             [?parentBlock :block/refs ?referencedPage]                            [?childBlock :block/parents ?parentBlock]                            [?referencedPage :node/title ?pagetitle]                        ]", tag);
-    return c.map((b) => {
-      const bb = b[0];
-      bb["parentBlock"] = b[1];
-      return bb;
-    });
+    const c = yield window.roamAlphaAPI.q("[                        :find (pull ?childBlock [*]) (pull ?parentBlock [*])                         :in $ ?pagetitle                        :where                             [?parentBlock :block/refs ?referencedPage]                            [?childBlock :block/parents ?parentBlock]                            [?referencedPage :node/title ?pagetitle]                        ]", tag);
+    const childBlocks = new Map();
+    for (const index in c) {
+      const block = c[index][0];
+      const parent = c[index][1];
+      block["parentBlock"] = parent;
+      if (childBlocks.has(block.uid)) {
+        const existingParents = childBlocks.get(block.uid).parentBlock.parents.map((x) => x.id);
+        if (existingParents.includes(parent.id)) {
+          continue;
+        }
+      }
+      childBlocks.set(block.uid, block);
+    }
+    return Array.from(childBlocks.values());
   });
   var convertToCloze = (s) => {
     s = s.replace(/{\s*c(\d*):([^}]*)}/g, "{{c$1::$2}}");

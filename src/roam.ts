@@ -21,7 +21,7 @@ export const pullBlocksUnderTag = async (
 ): Promise<BlockWithParent[]> => {
   // Returns array of [childBlock, parentBlockWithTag]
   // Looks for both direct and indirect children.
-  const c = window.roamAlphaAPI.q(
+  const c: [Block, BlockWithParent][] = await window.roamAlphaAPI.q(
     '[\
                         :find (pull ?childBlock [*]) (pull ?parentBlock [*]) \
                         :in $ ?pagetitle\
@@ -32,12 +32,34 @@ export const pullBlocksUnderTag = async (
                         ]',
     tag
   );
-  // augment child with info from parent
-  return c.map((b: [Block, Block]): BlockWithParent => {
-    const bb = <BlockWithParent>b[0];
-    bb['parentBlock'] = b[1];
-    return bb;
-  });
+  // Augment child with info from its *closest* parent.
+  const childBlocks: Map<string, BlockWithParent> = new Map();
+  for (const index in c) {
+    const block = <BlockWithParent>c[index][0];
+    const parent = c[index][1];
+    block['parentBlock'] = parent;
+    if (childBlocks.has(block.uid)) {
+      //console.log(`${block.uid} already has parent`);
+      const existingParents = childBlocks
+        .get(block.uid)!
+        .parentBlock.parents.map(x => x.id);
+      if (existingParents.includes(parent.id)) {
+        /*
+        console.log(
+          `new parent ${parent.id} is higher up than the current parent ${existingParents} in map, discard it.`
+        );
+        */
+        continue;
+      }
+      /*
+      console.log(
+        `new parent ${parent.id} is lower up than the current parent ${existingParents} in map, keep it.`
+      );
+      */
+    }
+    childBlocks.set(block.uid, block);
+  }
+  return Array.from(childBlocks.values());
 };
 
 export const convertToCloze = (s: string) => {

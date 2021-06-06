@@ -1,12 +1,10 @@
 export interface Block {
   string: string;
   time: any;
+  id: string;
   uid: string;
-  page: Page;
-}
-
-export interface Page {
-  id: number;
+  parents: {id: string}[];
+  page: {id: string};
 }
 
 export interface BlockWithParent extends Block {
