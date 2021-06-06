@@ -36,18 +36,20 @@ and Metadata = `f-123`.
 ## Advanced: Group Tags
 
 Group tags do 2 things:
-1. Any child block under a block with a group tag is considered a cloze, unless there are no cloze marks `{c1:...}` on it.
-2. Clozes generated from said child blocks automatically include context from the parent block.
+1. Any child blocks (direct or indirect) under a block with a **group tag** is considered a cloze, unless there are no cloze marks `{c1:...}` on it.
+2. Clozes generated from said child blocks automatically include context from the **closest parent** block.
 
 So something like this in Roam:
 ```text
     - Caffeine #srs/cloze-g
-        - Tastes good
+        - Tastes bitter.
         - Is an {c1:adenosine} antagonist.
+        - Adenosine antagonists #srs/cloze-g
+          - bind to adenosine receptors with no {c1:physiological effect}.
         - Has a half-life of {c1:5} hours.
 ```
 
-Would create 2 cloze notes (skipping the first child). Both cloze notes will have `Caffeine #srs/cloze-g` populated in the `ANKI_FIELD_FOR_GROUP_HEADER` field.
+Would create 3 cloze notes. Two cloze notes will have `Caffeine #srs/cloze-g` populated in the `ANKI_FIELD_FOR_GROUP_HEADER` field. The last note `bind to adenosine receptors with no {c1:physiological effect}.` will have `Adenosine antagonists #srs/cloze-g` in the `ANKI_FIELD_FOR_GROUP_HEADER` field.
 
 ## Caveats
 - Don't edit the sync metadata on the Anki note.
