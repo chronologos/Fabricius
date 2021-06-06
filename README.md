@@ -8,10 +8,10 @@
 **Disclaimer:** This software is provided as-is and you are responsible for your data. While we have tested this library as far as possible, there may still be bugs. You should keep backups of both Roam and Anki data.
 
 ## Getting started
-- Like any other client-side javascript plugin, install `main.js` in a javascript code block nested under a `{{roam/js}}` block. You will see a new sync button in your top navbar.
+- Like any other client-side javascript plugin, install `dist/browser.js` in a javascript code block nested under a `{{roam/js}}` block. You will see a new sync button in your top navbar.
 - Anki must be running, with the AnkiConnect plugin installed and configured (see below), for the sync button to work. It works fastest if Anki is running in the foreground.
 - Configuring AnkiConnect: Go to Anki -> Tools -> Addons -> Anki Connect -> Config and amend `webCorsOriginList` to include `https://roamresearch.com`
-- There are more constants (deck, note type etc.) that can be tweaked at the top of the js script.
+- There are more constants (deck, note type etc.) that can be tweaked at the top of the js script. Due to Typescript compilation, these config variables may be located further down in `browser.js`. Please look at `src/config.ts` to see the available variables and their names.
 
 ## Example
 
@@ -28,7 +28,7 @@ In [[C]], we can have {{c2::indirect references}} to variables using {{c1::[[poi
 
 and Metadata = `f-123`.
 
-- This assumes the default configuration of main.js
+- This assumes the default configuration of browser.js
 - Note the modified cloze syntax, since Roam reserves `{{}}` and `::` for internal use. 
 - An Anki note type named `ClozeRoam` with fields `Text` and `Metadata` has to exist in a deck named `Default`.
 - Please see [Anki docs](https://docs.ankiweb.net/templates/generation.html?highlight=cloze#cloze-templates) for more info on how a cloze note type needs to be configured (easiest is to clone the built-in Cloze note type).
