@@ -16,8 +16,10 @@ export const pullBlocksWithTag = async (tag: string): Promise<Block[]> => {
   return c.map((b: [Block, any]) => b[0]);
 };
 
+// TODO: Very similar to above code.
 export const pullBlocksUnderTag = async (
-  tag: string
+  groupTag: string,
+  titleTag: string
 ): Promise<BlockWithParent[]> => {
   // Returns array of [childBlock, parentBlockWithTag]
   // Looks for both direct and indirect children.
@@ -30,8 +32,24 @@ export const pullBlocksUnderTag = async (
                             [?childBlock :block/parents ?parentBlock]\
                             [?referencedPage :node/title ?pagetitle]\
                         ]',
-    tag
+    groupTag
   );
+  const c2: [Block, BlockWithParent, BlockWithParent][] =
+    await window.roamAlphaAPI.q(
+      '[\
+                        :find (pull ?childBlock [*]) (pull ?parentBlock [*]) (pull ?parentBlock2 [*]) \
+                        :in $ ?pagetitle ?pagetitle2\
+                        :where \
+                            [?parentBlock :block/refs ?referencedPage]\
+                            [?parentBlock2 :block/refs ?referencedPage2]\
+                            [?childBlock :block/parents ?parentBlock]\
+                             [?childBlock :block/parents ?parentBlock2]\
+                            [?referencedPage :node/title ?pagetitle]\
+                            [?referencedPage2 :node/title ?pagetitle2]\
+                        ]',
+      groupTag,
+      titleTag
+    );
   // Augment child with info from its *closest* parent.
   const childBlocks: Map<string, BlockWithParent> = new Map();
   for (const index in c) {
@@ -56,6 +74,25 @@ export const pullBlocksUnderTag = async (
         `new parent ${parent.id} is lower up than the current parent ${existingParents} in map, keep it.`
       );
       */
+    }
+    childBlocks.set(block.uid, block);
+  }
+  // Now populate for blocks which have a title.
+  for (const index in c2) {
+    const block = <BlockWithParent>c2[index][0];
+    const parent = c2[index][1];
+    const parent2 = c2[index][2];
+    block['parentBlock'] = parent;
+    block['titleBlock'] = parent2;
+    if (childBlocks.has(block.uid)) {
+      //console.log(`${block.uid} already has parent`);
+      const existingParents = childBlocks
+        .get(block.uid)!
+        .parentBlock.parents.map(x => x.id);
+      // For group tag, pick nearest parent
+      if (existingParents.includes(parent.id)) {
+        continue;
+      }
     }
     childBlocks.set(block.uid, block);
   }

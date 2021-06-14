@@ -19,11 +19,15 @@ const syncNow = async () => {
     config.CLOZE_TAG
   );
   // groupBlocks are augmented with information from their parent.
-  const groupBlocks = await pullBlocksUnderTag(config.GROUPED_CLOZE_TAG);
+  const groupBlocks = await pullBlocksUnderTag(
+    config.GROUPED_CLOZE_TAG,
+    config.TITLE_CLOZE_TAG
+  );
   const groupClozeBlocks: AugmentedBlock[] =
     groupBlocks.filter(blockContainsCloze);
+  const blocks: AugmentedBlock[] = singleBlocks.concat(groupClozeBlocks);
+  // console.log(JSON.stringify(singleBlocks, null, 2));
   // console.log(JSON.stringify(groupClozeBlocks, null, 2));
-  const blocks: AugmentedBlock[] = groupClozeBlocks.concat(singleBlocks);
   const blockWithNid: [Block, number][] = await Promise.all(
     blocks.map(b => processSingleBlock(b))
   );
@@ -58,6 +62,7 @@ const syncNow = async () => {
   const newerInAnki = blockWithNote.filter(
     x =>
       x.block.time <= x.note.block_time &&
+      // TODO(better diff algorithm here)
       convertToCloze(x.block.string) !==
         x.note['fields'][config.ANKI_FIELD_FOR_CLOZE_TEXT]['value']
   );
@@ -118,7 +123,7 @@ const renderFabriciusButton = () => {
 if (document.getElementById('sync-anki-button-span') !== null) {
   document.getElementById('sync-anki-button-span')!.remove();
 }
-console.log('adding anki sync');
+console.log('adding anki sync!');
 try {
   renderFabriciusButton();
 } catch (e) {

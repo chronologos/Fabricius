@@ -19,6 +19,9 @@ export const GROUPED_CLOZE_TAG = 'srs/cloze-g';
 // The block tagged with GROUPED_CLOZE_TAG will be synced to this field.
 export const ANKI_FIELD_FOR_GROUP_HEADER = 'Extra';
 
+export const TITLE_CLOZE_TAG = 'srs/cloze-t';
+export const ANKI_FIELD_FOR_TITLE = 'Title';
+
 // --- internals below this ---
 export const METADATA_SCHEMA_VERSION = 2;
 export const ANKI_CONNECT_VERSION = 6;

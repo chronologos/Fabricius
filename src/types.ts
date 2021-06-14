@@ -9,6 +9,7 @@ export interface Block {
 
 export interface BlockWithParent extends Block {
   parentBlock: Block;
+  titleBlock: Block;
 }
 
 export type AugmentedBlock = Block | BlockWithParent;

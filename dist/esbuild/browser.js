@@ -49,11 +49,13 @@
     ANKI_FIELD_FOR_CLOZE_TAG: () => ANKI_FIELD_FOR_CLOZE_TAG,
     ANKI_FIELD_FOR_CLOZE_TEXT: () => ANKI_FIELD_FOR_CLOZE_TEXT,
     ANKI_FIELD_FOR_GROUP_HEADER: () => ANKI_FIELD_FOR_GROUP_HEADER,
+    ANKI_FIELD_FOR_TITLE: () => ANKI_FIELD_FOR_TITLE,
     ANKI_MODEL_FOR_CLOZE_TAG: () => ANKI_MODEL_FOR_CLOZE_TAG,
     CLOZE_TAG: () => CLOZE_TAG,
     GROUPED_CLOZE_TAG: () => GROUPED_CLOZE_TAG,
     METADATA_SCHEMA_VERSION: () => METADATA_SCHEMA_VERSION,
     NO_NID: () => NO_NID,
+    TITLE_CLOZE_TAG: () => TITLE_CLOZE_TAG,
     config: () => config_exports
   });
   var CLOZE_TAG = "srs/cloze";
@@ -63,6 +65,8 @@
   var ANKI_FIELD_FOR_CLOZE_TAG = "Metadata";
   var GROUPED_CLOZE_TAG = "srs/cloze-g";
   var ANKI_FIELD_FOR_GROUP_HEADER = "Extra";
+  var TITLE_CLOZE_TAG = "srs/cloze-t";
+  var ANKI_FIELD_FOR_TITLE = "Title";
   var METADATA_SCHEMA_VERSION = 2;
   var ANKI_CONNECT_VERSION = 6;
   var ANKI_CONNECT_FINDNOTES = "findNotes";
@@ -76,13 +80,28 @@
     const c = window.roamAlphaAPI.q("[                        :find (pull ?referencingBlock [*])                         :in $ ?pagetitle                        :where                             [?referencingBlock :block/refs ?referencedPage]                            [?referencedPage :node/title ?pagetitle]                        ]", tag);
     return c.map((b) => b[0]);
   });
-  var pullBlocksUnderTag = (tag) => __async(void 0, null, function* () {
-    const c = yield window.roamAlphaAPI.q("[                        :find (pull ?childBlock [*]) (pull ?parentBlock [*])                         :in $ ?pagetitle                        :where                             [?parentBlock :block/refs ?referencedPage]                            [?childBlock :block/parents ?parentBlock]                            [?referencedPage :node/title ?pagetitle]                        ]", tag);
+  var pullBlocksUnderTag = (groupTag, titleTag) => __async(void 0, null, function* () {
+    const c = yield window.roamAlphaAPI.q("[                        :find (pull ?childBlock [*]) (pull ?parentBlock [*])                         :in $ ?pagetitle                        :where                             [?parentBlock :block/refs ?referencedPage]                            [?childBlock :block/parents ?parentBlock]                            [?referencedPage :node/title ?pagetitle]                        ]", groupTag);
+    const c2 = yield window.roamAlphaAPI.q("[                        :find (pull ?childBlock [*]) (pull ?parentBlock [*]) (pull ?parentBlock2 [*])                         :in $ ?pagetitle ?pagetitle2                        :where                             [?parentBlock :block/refs ?referencedPage]                            [?parentBlock2 :block/refs ?referencedPage2]                            [?childBlock :block/parents ?parentBlock]                             [?childBlock :block/parents ?parentBlock2]                            [?referencedPage :node/title ?pagetitle]                            [?referencedPage2 :node/title ?pagetitle2]                        ]", groupTag, titleTag);
     const childBlocks = new Map();
     for (const index in c) {
       const block = c[index][0];
       const parent = c[index][1];
       block["parentBlock"] = parent;
+      if (childBlocks.has(block.uid)) {
+        const existingParents = childBlocks.get(block.uid).parentBlock.parents.map((x) => x.id);
+        if (existingParents.includes(parent.id)) {
+          continue;
+        }
+      }
+      childBlocks.set(block.uid, block);
+    }
+    for (const index in c2) {
+      const block = c2[index][0];
+      const parent = c2[index][1];
+      const parent2 = c2[index][2];
+      block["parentBlock"] = parent;
+      block["titleBlock"] = parent2;
       if (childBlocks.has(block.uid)) {
         const existingParents = childBlocks.get(block.uid).parentBlock.parents.map((x) => x.id);
         if (existingParents.includes(parent.id)) {
@@ -162,7 +181,10 @@
     fieldsObj[config_exports.ANKI_FIELD_FOR_CLOZE_TEXT] = convertToCloze(block.string);
     fieldsObj[config_exports.ANKI_FIELD_FOR_CLOZE_TAG] = noteMetadata(block);
     if ("parentBlock" in block) {
-      fieldsObj[config_exports.ANKI_FIELD_FOR_GROUP_HEADER] = block.parentBlock.string;
+      fieldsObj[config_exports.ANKI_FIELD_FOR_GROUP_HEADER] = block.parentBlock.string.replace("#" + config_exports.GROUPED_CLOZE_TAG, "");
+    }
+    if ("titleBlock" in block) {
+      fieldsObj[config_exports.ANKI_FIELD_FOR_TITLE] = block.titleBlock.string.replace("#" + config_exports.TITLE_CLOZE_TAG, "");
     }
     return {
       deckName: config_exports.ANKI_DECK_FOR_CLOZE_TAG,
@@ -174,9 +196,9 @@
   // src/main.ts
   var syncNow = () => __async(void 0, null, function* () {
     const singleBlocks = yield pullBlocksWithTag(config_exports.CLOZE_TAG);
-    const groupBlocks = yield pullBlocksUnderTag(config_exports.GROUPED_CLOZE_TAG);
+    const groupBlocks = yield pullBlocksUnderTag(config_exports.GROUPED_CLOZE_TAG, config_exports.TITLE_CLOZE_TAG);
     const groupClozeBlocks = groupBlocks.filter(blockContainsCloze);
-    const blocks = groupClozeBlocks.concat(singleBlocks);
+    const blocks = singleBlocks.concat(groupClozeBlocks);
     const blockWithNid = yield Promise.all(blocks.map((b) => processSingleBlock(b)));
     const blocksWithNids = blockWithNid.filter(([_, nid]) => nid !== config_exports.NO_NID);
     const blocksWithNoNids = blockWithNid.filter(([_, nid]) => nid === config_exports.NO_NID).map((b) => b[0]);
@@ -226,7 +248,7 @@
   if (document.getElementById("sync-anki-button-span") !== null) {
     document.getElementById("sync-anki-button-span").remove();
   }
-  console.log("adding anki sync");
+  console.log("adding anki sync!");
   try {
     renderFabriciusButton();
   } catch (e) {
