@@ -181,10 +181,10 @@
     fieldsObj[config_exports.ANKI_FIELD_FOR_CLOZE_TEXT] = convertToCloze(block.string);
     fieldsObj[config_exports.ANKI_FIELD_FOR_CLOZE_TAG] = noteMetadata(block);
     if ("parentBlock" in block) {
-      fieldsObj[config_exports.ANKI_FIELD_FOR_GROUP_HEADER] = block.parentBlock.string.replace("#" + config_exports.GROUPED_CLOZE_TAG, "");
+      fieldsObj[config_exports.ANKI_FIELD_FOR_GROUP_HEADER] = block.parentBlock.string.replace("#" + config_exports.GROUPED_CLOZE_TAG, "").replace("#[[" + config_exports.GROUPED_CLOZE_TAG + "]]", "").replace("#" + config_exports.TITLE_CLOZE_TAG, "").replace("#[[" + config_exports.TITLE_CLOZE_TAG + "]]", "");
     }
     if ("titleBlock" in block) {
-      fieldsObj[config_exports.ANKI_FIELD_FOR_TITLE] = block.titleBlock.string.replace("#" + config_exports.TITLE_CLOZE_TAG, "");
+      fieldsObj[config_exports.ANKI_FIELD_FOR_TITLE] = block.titleBlock.string.replace("#" + config_exports.GROUPED_CLOZE_TAG, "").replace("#[[" + config_exports.GROUPED_CLOZE_TAG + "]]", "").replace("#" + config_exports.TITLE_CLOZE_TAG, "").replace("#[[" + config_exports.TITLE_CLOZE_TAG + "]]", "");
     }
     return {
       deckName: config_exports.ANKI_DECK_FOR_CLOZE_TAG,

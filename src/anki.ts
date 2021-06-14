@@ -91,14 +91,18 @@ const blockToAnkiSyntax = (block: AugmentedBlock): NewNote => {
   fieldsObj[config.ANKI_FIELD_FOR_CLOZE_TAG] = noteMetadata(block);
   // TODO This means parent is only updated if child is updated.
   if ('parentBlock' in block) {
-    fieldsObj[config.ANKI_FIELD_FOR_GROUP_HEADER] =
-      block.parentBlock.string.replace('#' + config.GROUPED_CLOZE_TAG, '');
+    fieldsObj[config.ANKI_FIELD_FOR_GROUP_HEADER] = block.parentBlock.string
+      .replace('#' + config.GROUPED_CLOZE_TAG, '')
+      .replace('#' + '[[' + config.GROUPED_CLOZE_TAG + ']]', '')
+      .replace('#' + config.TITLE_CLOZE_TAG, '')
+      .replace('#' + '[[' + config.TITLE_CLOZE_TAG + ']]', '');
   }
   if ('titleBlock' in block) {
-    fieldsObj[config.ANKI_FIELD_FOR_TITLE] = block.titleBlock.string.replace(
-      '#' + config.TITLE_CLOZE_TAG,
-      ''
-    );
+    fieldsObj[config.ANKI_FIELD_FOR_TITLE] = block.titleBlock.string
+      .replace('#' + config.GROUPED_CLOZE_TAG, '')
+      .replace('#' + '[[' + config.GROUPED_CLOZE_TAG + ']]', '')
+      .replace('#' + config.TITLE_CLOZE_TAG, '')
+      .replace('#' + '[[' + config.TITLE_CLOZE_TAG + ']]', '');
   }
   return {
     deckName: config.ANKI_DECK_FOR_CLOZE_TAG,
