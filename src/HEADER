@@ -1,0 +1,12 @@
+/* Fabricius v1.1
+ * Copyright (c) 2020 Ian Tay
+ *
+
+ * This requires Anki and the AnkiConnect extension. Anki must be running.
+ * You must configure ankiconnect to allow cross-origin requests from https://roamresearch.com.
+ * Go to Anki -> Tools -> Addons -> Anki Connect -> Config and amend `webCorsOriginList`
+ *
+ * Please close the Anki browse screen when syncing.
+ * Leave Anki open in the foreground to speed up the sync significantly.
+ *
+ */

@@ -1,6 +1,22 @@
 {
   "devDependencies": {
-    "eslint": "^7.27.0",
-    "eslint-config-google": "^0.14.0"
+    "@types/jest": "^26.0.23",
+    "@types/node": "^14.11.2",
+    "@typescript-eslint/eslint-plugin": "^4.26.0",
+    "@typescript-eslint/parser": "^4.26.0",
+    "esbuild": "^0.12.6",
+    "eslint": "^7.28.0",
+    "eslint-config-google": "^0.14.0",
+    "gts": "^3.1.0",
+    "jest": "^27.0.4",
+    "ts-jest": "^27.0.2",
+    "typescript": "^4.3.2"
+  },
+  "scripts": {
+    "test": "jest",
+    "lint": "gts lint",
+    "clean": "gts clean",
+    "bundle": "esbuild src/main.ts --bundle --sourcemap --banner:js=\"$(cat src/HEADER)\" --outfile=dist/esbuild/browser.js",
+    "fix": "gts fix"
   }
 }
