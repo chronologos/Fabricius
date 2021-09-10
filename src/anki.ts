@@ -104,6 +104,16 @@ const blockToAnkiSyntax = (block: AugmentedBlock): NewNote => {
       .replace('#' + config.TITLE_CLOZE_TAG, '')
       .replace('#' + '[[' + config.TITLE_CLOZE_TAG + ']]', '');
   }
+  // If parent block is equal to the title block, populate just the title block.
+  // This enables use-cases where both tags appear on the same block.
+  if (
+    'parentBlock' in block &&
+    'titleBlock' in block &&
+    block.parentBlock.string === block.titleBlock.string
+  ) {
+    console.log('redacting one field');
+    fieldsObj[config.ANKI_FIELD_FOR_GROUP_HEADER] = '';
+  }
   return {
     deckName: config.ANKI_DECK_FOR_CLOZE_TAG,
     modelName: config.ANKI_MODEL_FOR_CLOZE_TAG,

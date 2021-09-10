@@ -1,3 +1,11 @@
+# Development
+- reload roam after replacing javascript, otherwise plugin will not update.
+- `npm run bundle` to compile typescript.
+
+# Notes
+- Q: Should we resolve block refs? How about recursively?
+- A: Maybe we should just support hyperlinks/aliases instead.
+
 This is what the array of {nid, block, note} looks like:
 
 ```json

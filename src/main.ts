@@ -162,7 +162,7 @@ const updateBlock = async (blockWithNote: BlockWithNote): Promise<any> => {
 export const processSingleBlock = async (
   block: Block
 ): Promise<[Block, number]> => {
-  console.log('searching for block ' + block.uid);
+  // console.log('searching for block ' + block.uid);
   // TODO: should do a more exact structural match on the block uid here, but a collision *seems* unlikely.
   const nid: number[] = await invokeAnkiConnect(
     config.ANKI_CONNECT_FINDNOTES,

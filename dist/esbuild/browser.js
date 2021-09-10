@@ -1,5 +1,5 @@
-/* Fabricius v1.1
- * Copyright (c) 2020 Ian Tay
+/* Fabricius v1.1.1
+ * Copyright (c) 2021 Ian Tay
  *
 
  * This requires Anki and the AnkiConnect extension. Anki must be running.
@@ -186,6 +186,10 @@
     if ("titleBlock" in block) {
       fieldsObj[config_exports.ANKI_FIELD_FOR_TITLE] = block.titleBlock.string.replace("#" + config_exports.GROUPED_CLOZE_TAG, "").replace("#[[" + config_exports.GROUPED_CLOZE_TAG + "]]", "").replace("#" + config_exports.TITLE_CLOZE_TAG, "").replace("#[[" + config_exports.TITLE_CLOZE_TAG + "]]", "");
     }
+    if ("parentBlock" in block && "titleBlock" in block && block.parentBlock.string === block.titleBlock.string) {
+      console.log("redacting one field");
+      fieldsObj[config_exports.ANKI_FIELD_FOR_GROUP_HEADER] = "";
+    }
     return {
       deckName: config_exports.ANKI_DECK_FOR_CLOZE_TAG,
       modelName: config_exports.ANKI_MODEL_FOR_CLOZE_TAG,
@@ -274,7 +278,6 @@
     return updateNote(blockWithNote);
   });
   var processSingleBlock = (block) => __async(void 0, null, function* () {
-    console.log("searching for block " + block.uid);
     const nid = yield invokeAnkiConnect(config_exports.ANKI_CONNECT_FINDNOTES, config_exports.ANKI_CONNECT_VERSION, {
       query: `${config_exports.ANKI_FIELD_FOR_CLOZE_TAG}:re:${block.uid} AND note:${config_exports.ANKI_MODEL_FOR_CLOZE_TAG}`
     });
