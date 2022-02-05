@@ -181,13 +181,21 @@ export const processSingleBlock = async (
 };
 
 const blockContainsCloze = (block: AugmentedBlock) => {
-  const found = block.string.match(/c(\d*):([^}]*)}/g);
+  const found = block.string.match(/{c(\d+):([^}]*)}/g);
   return found !== null && found.length !== 0;
 };
 
+const ANKI_CLOZE_PATTERN = /{{c(\d+)::([^}:]*)}}/g;
+const ANKI_CLOZE_WITH_HINT_PATTERN = /{{c(\d+)::([^}:]*)::([^}]*)}}/g;
+
 // String manipulation functions
 const convertToRoamBlock = (s: string) => {
-  s = s.replace(/{{c(\d*)::([^}]*)}}/g, '{c$1:$2}');
+  if (s.match(ANKI_CLOZE_PATTERN)) {
+    s = s.replace(ANKI_CLOZE_PATTERN, '{c$1:$2}');
+  }
+  else if (s.match(ANKI_CLOZE_WITH_HINT_PATTERN)) {
+    s = s.replace(ANKI_CLOZE_WITH_HINT_PATTERN, '{c$1:$2:$3}');
+  }
   s = basicHtmlToMarkdown(s);
   return s;
 };

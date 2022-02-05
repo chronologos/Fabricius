@@ -99,8 +99,16 @@ export const pullBlocksUnderTag = async (
   return Array.from(childBlocks.values());
 };
 
+const ROAM_CLOZE_PATTERN = /{c(\d+):([^}:]*)}/g;
+const ROAM_CLOZE_WITH_HINT_PATTERN = /{c(\d*):([^}:]*):([^}]*)}/g;
+
 export const convertToCloze = (s: string) => {
-  s = s.replace(/{\s*c(\d*):([^}]*)}/g, '{{c$1::$2}}');
+  if (s.match(ROAM_CLOZE_PATTERN)) {
+    s = s.replace(ROAM_CLOZE_PATTERN, '{{c$1::$2}}');
+  }
+  else if (s.match(ROAM_CLOZE_WITH_HINT_PATTERN)) {
+    s = s.replace(ROAM_CLOZE_WITH_HINT_PATTERN, '{{c$1::$2::$3}}');
+  }
   s = basicMarkdownToHtml(s);
   return s;
 };
