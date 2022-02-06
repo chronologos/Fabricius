@@ -83,7 +83,7 @@
   var pullBlocksUnderTag = (groupTag, titleTag) => __async(void 0, null, function* () {
     const c = yield window.roamAlphaAPI.q("[                        :find (pull ?childBlock [*]) (pull ?parentBlock [*])                         :in $ ?pagetitle                        :where                             [?parentBlock :block/refs ?referencedPage]                            [?childBlock :block/parents ?parentBlock]                            [?referencedPage :node/title ?pagetitle]                        ]", groupTag);
     const c2 = yield window.roamAlphaAPI.q("[                        :find (pull ?childBlock [*]) (pull ?parentBlock [*]) (pull ?parentBlock2 [*])                         :in $ ?pagetitle ?pagetitle2                        :where                             [?parentBlock :block/refs ?referencedPage]                            [?parentBlock2 :block/refs ?referencedPage2]                            [?childBlock :block/parents ?parentBlock]                             [?childBlock :block/parents ?parentBlock2]                            [?referencedPage :node/title ?pagetitle]                            [?referencedPage2 :node/title ?pagetitle2]                        ]", groupTag, titleTag);
-    const childBlocks = new Map();
+    const childBlocks = /* @__PURE__ */ new Map();
     for (const index in c) {
       const block = c[index][0];
       const parent = c[index][1];
@@ -112,8 +112,14 @@
     }
     return Array.from(childBlocks.values());
   });
+  var ROAM_CLOZE_PATTERN = /{c(\d+):([^}:]*)}/g;
+  var ROAM_CLOZE_WITH_HINT_PATTERN = /{c(\d*):([^}:]*):([^}]*)}/g;
   var convertToCloze = (s) => {
-    s = s.replace(/{\s*c(\d*):([^}]*)}/g, "{{c$1::$2}}");
+    if (s.match(ROAM_CLOZE_PATTERN)) {
+      s = s.replace(ROAM_CLOZE_PATTERN, "{{c$1::$2}}");
+    } else if (s.match(ROAM_CLOZE_WITH_HINT_PATTERN)) {
+      s = s.replace(ROAM_CLOZE_WITH_HINT_PATTERN, "{{c$1::$2::$3}}");
+    }
     s = basicMarkdownToHtml(s);
     return s;
   };
@@ -287,11 +293,17 @@
     return [block, nid[0]];
   });
   var blockContainsCloze = (block) => {
-    const found = block.string.match(/c(\d*):([^}]*)}/g);
+    const found = block.string.match(/{c(\d+):([^}]*)}/g);
     return found !== null && found.length !== 0;
   };
+  var ANKI_CLOZE_PATTERN = /{{c(\d+)::([^}:]*)}}/g;
+  var ANKI_CLOZE_WITH_HINT_PATTERN = /{{c(\d+)::([^}:]*)::([^}]*)}}/g;
   var convertToRoamBlock = (s) => {
-    s = s.replace(/{{c(\d*)::([^}]*)}}/g, "{c$1:$2}");
+    if (s.match(ANKI_CLOZE_PATTERN)) {
+      s = s.replace(ANKI_CLOZE_PATTERN, "{c$1:$2}");
+    } else if (s.match(ANKI_CLOZE_WITH_HINT_PATTERN)) {
+      s = s.replace(ANKI_CLOZE_WITH_HINT_PATTERN, "{c$1:$2:$3}");
+    }
     s = basicHtmlToMarkdown(s);
     return s;
   };
