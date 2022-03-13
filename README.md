@@ -1,7 +1,7 @@
 # Fabricius (roam-to-anki v2)
 > _Connecting the east side of the city to Tiber Island since 62 BC, the Pons Fabricius (Fabricius Bridge) is the oldest bridge in Rome to survive to the present day. - Wikipedia_
 
-*Fabricius* is an Anki plugin that bidirectionally syncs with Roam Research. The goal is to have robust, fast syncing for the most common use-cases.
+*Fabricius* is a Roam Research plugin that allows bidirectional sync with Anki. The goal is to have robust, fast syncing for the most common use-cases.
 
 ![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/chronologos/Fabricius?sort=semver)
 
