@@ -30,7 +30,7 @@ and Metadata = `f-123`.
 
 - This assumes the default configuration of browser.js
 - Note the modified cloze syntax, since Roam reserves `{{}}` and `::` for internal use. 
-- An Anki note type named `ClozeRoam` with fields `Text` and `Metadata` has to exist in a deck named `Default`.
+- An Anki note type named `ClozeRoam` with fields `Text` and `Metadata` has to exist in a deck named `Max Infinity`.
 - Please see [Anki docs](https://docs.ankiweb.net/templates/generation.html?highlight=cloze#cloze-templates) for more info on how a cloze note type needs to be configured (easiest is to clone the built-in Cloze note type).
 
 Title tags provide context to 
