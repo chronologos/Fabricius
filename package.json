@@ -16,7 +16,7 @@
     "test": "jest",
     "lint": "gts lint",
     "clean": "gts clean",
-    "bundle": "esbuild src/main.ts --bundle --sourcemap --banner:js=\"$(cat src/HEADER)\" --outfile=dist/esbuild/browser.js",
+    "bundle": "esbuild src/main.ts --bundle --sourcemap --banner:js=\"$(cat src/HEADER)\" --outfile=extension.js",
     "fix": "gts fix"
   }
 }

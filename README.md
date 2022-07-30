@@ -7,14 +7,31 @@
 
 **Disclaimer:** This software is provided as-is and you are responsible for your data. While we have tested this library as far as possible, there may still be bugs. You should keep backups of both Roam and Anki data.
 
-## Getting started
-- Like any other client-side javascript plugin, install `dist/browser.js` in a javascript code block nested under a `{{roam/js}}` block. You will see a new sync button in your top navbar.
+## Getting started (Roam Depot)
+
 - Anki must be running, with the AnkiConnect plugin installed and configured (see below), for the sync button to work. It works fastest if Anki is running in the foreground.
 - Configuring AnkiConnect: Go to Anki -> Tools -> Addons -> Anki Connect -> Config and amend `webCorsOriginList` to include `https://roamresearch.com`
+
+## Getting started (`roam/js` install)
+
+- Like any other client-side javascript plugin, install `dist/browser.js` in a javascript code block nested under a `{{roam/js}}` block. You will see a new sync button in your top navbar.
 - There are more constants (deck, note type etc.) that can be tweaked at the top of the js script. Due to Typescript compilation, these config variables may be located further down in `browser.js`. Please look at `src/config.ts` to see the available variables and their names.
+- Rest of the instructions are the same as for Roam Depot.
 
-## Example
+## Recommended use
 
+The recommended use is to create simple Q&A cards using the provided cloze functionality.
+
+```text
+- How to cook onion soup
+  - Onion Soup Recipe #[[srs/cloze-g]]
+    - Q: What is the cook time?
+      A: {c1:20 minutes}
+    - Q: How many onions should I use?
+      A: {c1: 2 per person.}
+```
+
+## Examples
 
 If we have the following text in a Roam block with block id `f-123`:
 ```text
@@ -82,5 +99,3 @@ Specifically, group tags work in the following way:
 - There is no garbage collection for unused notes in Anki (yet).
 - If the same uid is updated in both Roam and Anki, Roam will be taken as the source of truth.
 - Changes to group tags and title tags do not cause a sync for clozes blocks underneath them. The actual cloze block must be updated.
-
-

@@ -100,13 +100,12 @@ export const pullBlocksUnderTag = async (
 };
 
 const ROAM_CLOZE_PATTERN = /{c(\d+):([^}:]*)}/g;
-const ROAM_CLOZE_WITH_HINT_PATTERN = /{c(\d*):([^}:]*):([^}]*)}/g;
+const ROAM_CLOZE_WITH_HINT_PATTERN = /{c(\d*):([^}:]*):hint:([^}]*)}/g;
 
 export const convertToCloze = (s: string) => {
   if (s.match(ROAM_CLOZE_PATTERN)) {
     s = s.replace(ROAM_CLOZE_PATTERN, '{{c$1::$2}}');
-  }
-  else if (s.match(ROAM_CLOZE_WITH_HINT_PATTERN)) {
+  } else if (s.match(ROAM_CLOZE_WITH_HINT_PATTERN)) {
     s = s.replace(ROAM_CLOZE_WITH_HINT_PATTERN, '{{c$1::$2::$3}}');
   }
   s = basicMarkdownToHtml(s);
@@ -124,14 +123,16 @@ export const noteMetadata = (block: AugmentedBlock) => {
 
 const basicMarkdownToHtml = (s: string) => {
   s = s.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
-  s = s.replace(/"__(.*?)__/g, '<i>$1</i>');
+  s = s.replace(/__(.*?)__/g, '<i>$1</i>');
+  s = s.replace(/\n/g, '<br>');
+
   return s;
 };
 
 // Given an input or the current page, returns map of attributes.
-const getAttrUnderBlock = (blockUid: string) => {
-  return getAttrConfigFromQuery(
-    `[:find (pull ?e [*]) :where [?e :block/uid "${blockUid}"] ]`
+export const getAttrUnderBlock = (blockUid: string) => {
+  return getAttrFromQuery(
+    `[:find (pull ?e [*]) :where [?e :block/title "${blockUid}"] ]`
   );
 };
 
@@ -158,3 +159,9 @@ const getAttrFromQuery = (query: string) => {
   // eslint-disable-next-line node/no-unsupported-features/es-builtins
   return Object.fromEntries(entries);
 };
+
+const toAttributeValue = (s: string) =>
+  (s.trim().startsWith('{{or: ')
+    ? s.substring('{{or: '.length, s.indexOf('|'))
+    : s
+  ).trim();

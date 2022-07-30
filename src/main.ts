@@ -9,27 +9,44 @@ import {
   invokeAnkiConnect,
 } from './anki';
 import {config} from './config';
-import {convertToCloze, pullBlocksUnderTag, pullBlocksWithTag} from './roam';
+import {
+  convertToCloze,
+  pullBlocksUnderTag,
+  pullBlocksWithTag,
+  getAttrUnderBlock,
+} from './roam';
+
+async function retry(fn: () => Promise<any>, n: number) {
+  for (let i = 0; i < n; i++) {
+    try {
+      return await fn();
+    } catch {}
+  }
+
+  throw new Error(`Failed retrying ${n} times`);
+}
 
 // Core sync logic
 const syncNow = async () => {
   // STEP 1: Get all blocks that reference srs/cloze
   // Useful attributes in these blocks: uid, string, time (unix epoch)
-  const singleBlocks: AugmentedBlock[] = await pullBlocksWithTag(
-    config.CLOZE_TAG
+  const singleBlocks: AugmentedBlock[] = await retry(
+    () => pullBlocksWithTag(config.CLOZE_TAG),
+    3
   );
   // groupBlocks are augmented with information from their parent.
-  const groupBlocks = await pullBlocksUnderTag(
-    config.GROUPED_CLOZE_TAG,
-    config.TITLE_CLOZE_TAG
+  const groupBlocks = await retry(
+    () => pullBlocksUnderTag(config.GROUPED_CLOZE_TAG, config.TITLE_CLOZE_TAG),
+    3
   );
   const groupClozeBlocks: AugmentedBlock[] =
     groupBlocks.filter(blockContainsCloze);
   const blocks: AugmentedBlock[] = singleBlocks.concat(groupClozeBlocks);
   // console.log(JSON.stringify(singleBlocks, null, 2));
   // console.log(JSON.stringify(groupClozeBlocks, null, 2));
-  const blockWithNid: [Block, number][] = await Promise.all(
-    blocks.map(b => processSingleBlock(b))
+  const blockWithNid: [Block, number][] = await retry(
+    () => Promise.all(blocks.map(b => processSingleBlock(b))),
+    3
   );
   const blocksWithNids = blockWithNid.filter(
     ([_, nid]) => nid !== config.NO_NID
@@ -37,7 +54,7 @@ const syncNow = async () => {
   const blocksWithNoNids = blockWithNid
     .filter(([_, nid]) => nid === config.NO_NID)
     .map(b => b[0]);
-  const existingNotes = await batchFindNotes(blocksWithNids);
+  const existingNotes = await retry(() => batchFindNotes(blocksWithNids), 3);
 
   // STEP 2: For blocks that exist in both Anki and Roam, generate `blockWithNote`.
   // The schema for `blockWithNote` is shown in `NOTES.md`.
@@ -71,20 +88,25 @@ const syncNow = async () => {
   console.log('[syncNow] newer in anki ' + newerInAnki.length);
 
   // STEP 4: Update Anki's outdated notes
-  const updateExistingInAnki = await Promise.all(
-    newerInRoam.map(x => updateNote(x))
+  const updateExistingInAnki = await retry(
+    () => Promise.all(newerInRoam.map(x => updateNote(x))),
+    3
   );
   console.log(updateExistingInAnki); // should be an array of nulls if there are no errors
 
   // STEP 5: Update Roam's outdated blocks
-  const updateExistingInRoam = await Promise.all(
-    newerInAnki.map(x => updateBlock(x))
+  const updateExistingInRoam = await retry(
+    () => Promise.all(newerInAnki.map(x => updateBlock(x))),
+    3
   );
   console.log(updateExistingInRoam); // should be an array of nulls if there are no errors
 
   // STEP 6: Create new cards in Anki
-  const results = await batchAddNotes(blocksWithNoNids);
+  const results = await retry(() => batchAddNotes(blocksWithNoNids), 3);
   console.log(results); // should be an array of nulls if there are no errors
+  console.log(
+    '[syncNow]' + JSON.stringify(getAttrUnderBlock('fabricius/config'))
+  );
 };
 
 // UI logic
@@ -120,6 +142,11 @@ const renderFabriciusButton = () => {
   icon.onclick = syncNow;
 };
 
+const removeFabriciusButton = () => {
+  const syncAnkiButton = document.getElementById('sync-anki-button-span');
+  syncAnkiButton?.remove();
+};
+
 if (document.getElementById('sync-anki-button-span') !== null) {
   document.getElementById('sync-anki-button-span')!.remove();
 }
@@ -129,6 +156,20 @@ try {
 } catch (e) {
   window.requestAnimationFrame(renderFabriciusButton);
 }
+
+// For Roam Depot
+export default {
+  onload: () => {
+    try {
+      renderFabriciusButton();
+    } catch (e) {
+      window.requestAnimationFrame(renderFabriciusButton);
+    }
+  },
+  onunload: () => {
+    removeFabriciusButton();
+  },
+};
 
 // Helpers
 
@@ -192,9 +233,8 @@ const ANKI_CLOZE_WITH_HINT_PATTERN = /{{c(\d+)::([^}:]*)::([^}]*)}}/g;
 const convertToRoamBlock = (s: string) => {
   if (s.match(ANKI_CLOZE_PATTERN)) {
     s = s.replace(ANKI_CLOZE_PATTERN, '{c$1:$2}');
-  }
-  else if (s.match(ANKI_CLOZE_WITH_HINT_PATTERN)) {
-    s = s.replace(ANKI_CLOZE_WITH_HINT_PATTERN, '{c$1:$2:$3}');
+  } else if (s.match(ANKI_CLOZE_WITH_HINT_PATTERN)) {
+    s = s.replace(ANKI_CLOZE_WITH_HINT_PATTERN, '{c$1:$2:hint:$3}');
   }
   s = basicHtmlToMarkdown(s);
   return s;
@@ -206,5 +246,6 @@ const basicHtmlToMarkdown = (s: string) => {
   s = s.replace('<i>', '__');
   s = s.replace('</i>', '__');
   s = s.replace('&nbsp;', ' ');
+  s = s.replace('<br>', '\n');
   return s;
 };
