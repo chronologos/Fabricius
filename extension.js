@@ -162,9 +162,7 @@
   });
   var batchAddNotes = (blocks) => __async(void 0, null, function* () {
     const newNotes = blocks.map((b) => blockToAnkiSyntax(b));
-    return invokeAnkiConnect(config_exports.ANKI_CONNECT_ADDNOTES, config_exports.ANKI_CONNECT_VERSION, {
-      notes: newNotes
-    });
+    return invokeAnkiConnect(config_exports.ANKI_CONNECT_ADDNOTES, config_exports.ANKI_CONNECT_VERSION, { notes: newNotes });
   });
   var updateNote = (blockWithNote) => __async(void 0, null, function* () {
     const newNote = blockToAnkiSyntax(blockWithNote.block);
