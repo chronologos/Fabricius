@@ -2,8 +2,9 @@
   "extends": "./node_modules/gts/tsconfig-google.json",
   "compilerOptions": {
     "target": "es6",
-    "module": "commonjs",
-    // "moduleResolution": "node",
+    "module": "ES2020",
+    "jsx": "react",
+    "moduleResolution": "node",
     "declaration": true,
     "strict": true,
     "noImplicitAny": true /* Raise error on expressions and declarations with an implied 'any' type. */,
@@ -22,7 +23,7 @@
     "rootDir": ".",
     "outDir": "./dist/tsc/",
     "types": ["jest"],
-    "lib": ["ES2019", "DOM"]
+    "lib": ["ES2020", "DOM"]
   },
   "include": ["src/**/*.ts", "test/**/*.ts"]
 }

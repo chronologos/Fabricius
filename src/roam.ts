@@ -129,13 +129,6 @@ const basicMarkdownToHtml = (s: string) => {
   return s;
 };
 
-// Given an input or the current page, returns map of attributes.
-export const getAttrUnderBlock = (blockUid: string) => {
-  return getAttrFromQuery(
-    `[:find (pull ?e [*]) :where [?e :block/title "${blockUid}"] ]`
-  );
-};
-
 // This function is handpicked from David Vargas' roam-client https://github.com/dvargas92495/roam-client
 // It is used to grab configuration from a Roam page.
 const getAttrFromQuery = (query: string) => {

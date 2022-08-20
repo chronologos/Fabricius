@@ -24,8 +24,30 @@ export const batchFindNotes = async (blocksWithNids: [Block, number][]) => {
   return ankiNote;
 };
 
-export const batchAddNotes = async (blocks: Block[]): Promise<any> => {
-  const newNotes = blocks.map(b => blockToAnkiSyntax(b));
+export const batchAddNotes = async (
+  blocks: Block[],
+  clozeTextField: string,
+  clozeTagField: string,
+  groupHeaderField: string,
+  groupedClozeTag: string,
+  titleField: string,
+  titleClozeTag: string,
+  deck: string,
+  model: string
+): Promise<any> => {
+  const newNotes = blocks.map(b =>
+    blockToAnkiSyntax(
+      b,
+      clozeTextField,
+      clozeTagField,
+      groupHeaderField,
+      groupedClozeTag,
+      titleField,
+      titleClozeTag,
+      deck,
+      model
+    )
+  );
   return invokeAnkiConnect(
     config.ANKI_CONNECT_ADDNOTES,
     config.ANKI_CONNECT_VERSION,
@@ -34,9 +56,27 @@ export const batchAddNotes = async (blocks: Block[]): Promise<any> => {
 };
 
 export const updateNote = async (
-  blockWithNote: BlockWithNote
+  blockWithNote: BlockWithNote,
+  clozeTextField: string,
+  clozeTagField: string,
+  groupHeaderField: string,
+  groupedClozeTag: string,
+  titleField: string,
+  titleClozeTag: string,
+  deck: string,
+  model: string
 ): Promise<any> => {
-  const newNote = blockToAnkiSyntax(blockWithNote.block);
+  const newNote = blockToAnkiSyntax(
+    blockWithNote.block,
+    clozeTextField,
+    clozeTagField,
+    groupHeaderField,
+    groupedClozeTag,
+    titleField,
+    titleClozeTag,
+    deck,
+    model
+  );
   newNote.id = blockWithNote.note.noteId;
   delete newNote.deckName;
   delete newNote.modelName;
@@ -84,25 +124,35 @@ export const invokeAnkiConnect = (
   });
 };
 
-const blockToAnkiSyntax = (block: AugmentedBlock): NewNote => {
+const blockToAnkiSyntax = (
+  block: AugmentedBlock,
+  clozeTextField: string,
+  clozeTagField: string,
+  groupHeaderField: string,
+  groupedClozeTag: string,
+  titleField: string,
+  titleClozeTag: string,
+  deck: string,
+  model: string
+): NewNote => {
   const fieldsObj: any = {};
   // TODO: extract tags in a certain format. use namespaces.
-  fieldsObj[config.ANKI_FIELD_FOR_CLOZE_TEXT] = convertToCloze(block.string);
-  fieldsObj[config.ANKI_FIELD_FOR_CLOZE_TAG] = noteMetadata(block);
+  fieldsObj[clozeTextField] = convertToCloze(block.string);
+  fieldsObj[clozeTagField] = noteMetadata(block);
   // TODO This means parent is only updated if child is updated.
   if ('parentBlock' in block) {
-    fieldsObj[config.ANKI_FIELD_FOR_GROUP_HEADER] = block.parentBlock.string
-      .replace('#' + config.GROUPED_CLOZE_TAG, '')
-      .replace('#' + '[[' + config.GROUPED_CLOZE_TAG + ']]', '')
-      .replace('#' + config.TITLE_CLOZE_TAG, '')
-      .replace('#' + '[[' + config.TITLE_CLOZE_TAG + ']]', '');
+    fieldsObj[groupHeaderField] = block.parentBlock.string
+      .replace('#' + groupedClozeTag, '')
+      .replace('#' + '[[' + groupedClozeTag + ']]', '')
+      .replace('#' + titleClozeTag, '')
+      .replace('#' + '[[' + titleClozeTag + ']]', '');
   }
   if ('titleBlock' in block) {
-    fieldsObj[config.ANKI_FIELD_FOR_TITLE] = block.titleBlock.string
-      .replace('#' + config.GROUPED_CLOZE_TAG, '')
-      .replace('#' + '[[' + config.GROUPED_CLOZE_TAG + ']]', '')
-      .replace('#' + config.TITLE_CLOZE_TAG, '')
-      .replace('#' + '[[' + config.TITLE_CLOZE_TAG + ']]', '');
+    fieldsObj[titleField] = block.titleBlock.string
+      .replace('#' + groupedClozeTag, '')
+      .replace('#' + '[[' + groupedClozeTag + ']]', '')
+      .replace('#' + titleClozeTag, '')
+      .replace('#' + '[[' + titleClozeTag + ']]', '');
   }
   // If parent block is equal to the title block, populate just the title block.
   // This enables use-cases where both tags appear on the same block.
@@ -112,11 +162,11 @@ const blockToAnkiSyntax = (block: AugmentedBlock): NewNote => {
     block.parentBlock.string === block.titleBlock.string
   ) {
     console.log('redacting one field');
-    fieldsObj[config.ANKI_FIELD_FOR_GROUP_HEADER] = '';
+    fieldsObj[groupHeaderField] = '';
   }
   return {
-    deckName: config.ANKI_DECK_FOR_CLOZE_TAG,
-    modelName: config.ANKI_MODEL_FOR_CLOZE_TAG,
+    deckName: deck,
+    modelName: model,
     fields: fieldsObj,
   };
 };
