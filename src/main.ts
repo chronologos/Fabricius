@@ -140,7 +140,22 @@ const syncNow = async (extensionAPI: any) => {
 
   // STEP 5: Update Roam's outdated blocks
   const updateExistingInRoam = await retry(
-    () => Promise.all(newerInAnki.map(x => updateBlock(x))),
+    () =>
+      Promise.all(
+        newerInAnki.map(x =>
+          updateBlock(
+            x,
+            clozeField,
+            metadataField,
+            groupHeaderField,
+            groupTag,
+            titleField,
+            titleTag,
+            deck,
+            model
+          )
+        )
+      ),
     3
   );
   console.log(updateExistingInRoam); // should be an array of nulls if there are no errors
@@ -344,7 +359,17 @@ const getOrDefault = async (r: Promise<string>, d: string): Promise<string> => {
 };
 
 // updateBlock mutates `blockWithNote`.
-const updateBlock = async (blockWithNote: BlockWithNote): Promise<any> => {
+const updateBlock = async (
+  blockWithNote: BlockWithNote,
+  clozeTextField: string,
+  clozeTagField: string,
+  groupHeaderField: string,
+  groupedClozeTag: string,
+  titleField: string,
+  titleClozeTag: string,
+  deck: string,
+  model: string
+): Promise<any> => {
   const noteText =
     blockWithNote.note.fields[config.ANKI_FIELD_FOR_CLOZE_TEXT]['value'];
   const blockText = convertToRoamBlock(noteText);
@@ -367,7 +392,17 @@ const updateBlock = async (blockWithNote: BlockWithNote): Promise<any> => {
   // console.log(updateTime);
   blockWithNote.block.time = updateTime;
   blockWithNote.block.string = blockText;
-  return updateNote(blockWithNote);
+  return updateNote(
+    blockWithNote,
+    clozeTextField,
+    clozeTagField,
+    groupHeaderField,
+    groupedClozeTag,
+    titleField,
+    titleClozeTag,
+    deck,
+    model
+  );
 };
 
 const processSingleBlock = async (block: Block): Promise<[Block, number]> => {

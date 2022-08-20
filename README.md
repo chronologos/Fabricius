@@ -13,7 +13,7 @@
 
 1. Install the [AnkiConnect](https://ankiweb.net/shared/info/2055492159) plugin for Anki.
 2. Configure AnkiConnect: Go to `Anki -> Tools -> Addons -> Anki Connect -> Config` and amend `webCorsOriginList` to include `https://roamresearch.com`
-3. Create an Anki note type based on Cloze named `ClozeRoam`. It needs to have the fields `Text`, `Metadata`, `Extra` and `Title`. Upon syncing, notes will be created in a deck named `Max Infinity`, which has to exist. 
+3. Create an Anki note type based on Cloze named `ClozeRoam`. It needs to have the fields `Text`, `Metadata`, `Extra` and `Title`. Upon syncing, notes will be created in a deck named `Max Infinity`, which has to exist. These fields can be configured in Roam settings.
    - ![Example](note-deck-setup.png)
 4. Modify the template for the note type to look something like this:
 
@@ -28,14 +28,9 @@
 <div id="extra">{{Extra}}</div>
 {{cloze:Text}}
 ```
+
 5. Before clicking on the [Sync button](sync-button.png), Anki must be running. Sync is fastest if Anki is running in the foreground.
 6. If cards don't sync, it's likely because Anki has been in the background for too long. Try syncing again after switching it to the foreground.
-
-## Getting started (`roam/js` install)
-
-- Like any other client-side javascript plugin, install `dist/browser.js` in a javascript code block nested under a `{{roam/js}}` block. You will see a new sync button in your top navbar.
-- There are more constants (deck, note type etc.) that can be tweaked at the top of the js script. Due to Typescript compilation, these config variables may be located further down in `browser.js`. Please look at `src/config.ts` to see the available variables and their names.
-- Rest of the instructions are the same as for Roam Depot.
 
 ## Recommended use
 
@@ -81,8 +76,6 @@ and Metadata = `f-123`.
 - This assumes the default configuration of browser.js
 - Note the modified cloze syntax, since Roam reserves `{{}}` and `::` for internal use. 
 - Please see [Anki docs](https://docs.ankiweb.net/templates/generation.html?highlight=cloze#cloze-templates) for more info on how a cloze note type needs to be configured (easiest is to clone the built-in Cloze note type).
-
-Title tags provide context to 
 
 ### Group and Title Tags - Pull in more context!
 

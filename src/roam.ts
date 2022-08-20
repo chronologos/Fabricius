@@ -128,33 +128,3 @@ const basicMarkdownToHtml = (s: string) => {
 
   return s;
 };
-
-// This function is handpicked from David Vargas' roam-client https://github.com/dvargas92495/roam-client
-// It is used to grab configuration from a Roam page.
-const getAttrFromQuery = (query: string) => {
-  const pageResults = window.roamAlphaAPI.q(query);
-  if (pageResults.length === 0 || !pageResults[0][0].attrs) {
-    return {};
-  }
-
-  const configurationAttrRefs = pageResults[0][0].attrs.map(
-    a => a[2].source[1]
-  );
-  const entries = configurationAttrRefs.map(
-    r =>
-      window.roamAlphaAPI
-        .q(
-          `[:find (pull ?e [:block/string]) :where [?e :block/uid "${r}"] ]`
-        )[0][0]
-        .string?.split('::')
-        .map(toAttributeValue) || [r, 'undefined']
-  );
-  // eslint-disable-next-line node/no-unsupported-features/es-builtins
-  return Object.fromEntries(entries);
-};
-
-const toAttributeValue = (s: string) =>
-  (s.trim().startsWith('{{or: ')
-    ? s.substring('{{or: '.length, s.indexOf('|'))
-    : s
-  ).trim();
