@@ -34,7 +34,7 @@ export const batchAddNotes = async (
   titleClozeTag: string,
   deck: string,
   model: string
-): Promise<any> => {
+): Promise<Number | null | Array<Number>> => {
   const newNotes = blocks.map(b =>
     blockToAnkiSyntax(
       b,
@@ -65,7 +65,7 @@ export const updateNote = async (
   titleClozeTag: string,
   deck: string,
   model: string
-): Promise<any> => {
+): Promise<Number | null | Array<Number>> => {
   const newNote = blockToAnkiSyntax(
     blockWithNote.block,
     clozeTextField,
@@ -91,7 +91,7 @@ export const invokeAnkiConnect = (
   action: string,
   version: number,
   params = {}
-): Promise<any> => {
+): Promise<Number | null | Array<Number>> => {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.addEventListener('error', () =>
@@ -99,7 +99,10 @@ export const invokeAnkiConnect = (
     );
     xhr.addEventListener('load', () => {
       try {
-        const response = JSON.parse(xhr.responseText);
+        const response: {
+          result: Number | null | Array<Number>;
+          error: string | null;
+        } = JSON.parse(xhr.responseText);
         if (Object.getOwnPropertyNames(response).length !== 2) {
           throw Error('response has an unexpected number of fields');
         }

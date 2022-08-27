@@ -15,11 +15,11 @@ import {Intent} from '@blueprintjs/core';
 
 // Core sync logic
 const syncNow = async (extensionAPI: any) => {
-  console.log('[syncNow] starting sync');
+  console.log('[syncNow] started');
 
   // STEP 0: Load all config
   const allSettings = await extensionAPI.settings.getAll();
-  console.log(allSettings);
+  console.log('settings: ' + JSON.stringify(allSettings));
   const groupTag = await getOrDefault(
     extensionAPI.settings.get(config.GROUPED_CLOZE_TAG_KEY),
     config.GROUPED_CLOZE_TAG
@@ -51,6 +51,25 @@ const syncNow = async (extensionAPI: any) => {
   const metadataField = await getOrDefault(
     extensionAPI.settings.get(config.ANKI_FIELD_FOR_METADATA_KEY),
     config.ANKI_FIELD_FOR_METADATA
+  );
+
+  console.log(
+    'settings - clozeField:' +
+      clozeField +
+      ', metadataField:' +
+      metadataField +
+      ', groupHeaderField:' +
+      groupHeaderField +
+      ', groupTag:' +
+      groupTag +
+      ', titleField:' +
+      titleField +
+      ', titleTag:' +
+      titleTag +
+      ', deck:' +
+      deck +
+      ', model:' +
+      model
   );
 
   // STEP 1: Get all blocks that reference CLOZE_TAG
@@ -113,8 +132,16 @@ const syncNow = async (extensionAPI: any) => {
       convertToCloze(x.block.string) !== x.note['fields'][clozeField]['value']
   );
   console.log('[syncNow] total synced blocks ' + blocks.length);
-  console.log('[syncNow] newer in roam ' + newerInRoam.length);
-  console.log('[syncNow] newer in anki ' + newerInAnki.length);
+  console.log('[syncNow] # new blocks ' + blocksWithNoNids.length);
+  console.log(blocksWithNoNids.map(b => b.string));
+  console.log(
+    '[syncNow] # updated blocks/notes that are newer in roam ' +
+      newerInRoam.length
+  );
+  console.log(
+    '[syncNow] # updated blocks/notes that are newer in anki ' +
+      newerInAnki.length
+  );
 
   // STEP 4: Update Anki's outdated notes
   const updateExistingInAnki = await retry(
@@ -136,7 +163,9 @@ const syncNow = async (extensionAPI: any) => {
       ),
     3
   );
-  console.log(updateExistingInAnki); // should be an array of nulls if there are no errors
+  console.log(
+    '[syncNow] updateExistingInAnki: ' + JSON.stringify(updateExistingInAnki)
+  ); // should be an array of nulls if there are no errors
 
   // STEP 5: Update Roam's outdated blocks
   const updateExistingInRoam = await retry(
@@ -158,7 +187,9 @@ const syncNow = async (extensionAPI: any) => {
       ),
     3
   );
-  console.log(updateExistingInRoam); // should be an array of nulls if there are no errors
+  console.log(
+    '[syncNow] updateExistingInRoam: ' + JSON.stringify(updateExistingInRoam)
+  ); // should be an array of nulls if there are no errors
 
   // STEP 6: Create new cards in Anki
   const results = await retry(
@@ -176,7 +207,15 @@ const syncNow = async (extensionAPI: any) => {
       ),
     3
   );
-  console.log(results); // should be an array of nulls if there are no errors
+  console.log('[syncNow] new cards: ' + JSON.stringify(results)); // should be an array of ids if there are no errors
+  if (results === null || (Array.isArray(results) && results.includes(null))) {
+    render({
+      id: 'syncer',
+      content:
+        'Fabricius: failed to sync. Please check deck/model/field settings.',
+      intent: Intent.DANGER,
+    });
+  }
   render({
     id: 'syncer',
     content: 'Fabricius: sync complete!',
@@ -352,7 +391,7 @@ const retry = async (fn: () => Promise<any>, n: number) => {
 
 const getOrDefault = async (r: Promise<string>, d: string): Promise<string> => {
   const res = await r;
-  if (res === null) {
+  if (res === null || res.trim() === '') {
     return d;
   }
   return res;
