@@ -444,23 +444,30 @@ const updateBlock = async (
   );
 };
 
-const processSingleBlock = async (block: Block): Promise<[Block, number]> => {
+const processSingleBlock = async (block: Block): Promise<[Block, Number]> => {
   // console.log('searching for block ' + block.uid);
   // TODO: should do a more exact structural match on the block uid here, but a collision *seems* unlikely.
-  const nid: number[] = await invokeAnkiConnect(
+  const nid: Number | null | Number[] = await invokeAnkiConnect(
     config.ANKI_CONNECT_FINDNOTES,
     config.ANKI_CONNECT_VERSION,
     {
       query: `${config.ANKI_FIELD_FOR_METADATA}:re:${block.uid} AND note:${config.ANKI_MODEL_NAME}`,
     }
   );
-  if (nid.length === 0) {
-    // create card in Anki
-    return [block, config.NO_NID];
+  if (nid === null) {
+    throw new Error('[processSingleBlock] null note ID');
   }
-  // TODO(can be improved)
-  // assume that only 1 note matches
-  return [block, nid[0]];
+  if (Array.isArray(nid)) {
+    if (nid.length === 0) {
+      // create card in Anki
+      return [block, config.NO_NID];
+    } else {
+      // TODO(can be improved)
+      // assume that only 1 note matches
+      return [block, nid[0]];
+    }
+  }
+  throw new Error('[processSingleBlock] malformed note ID');
 };
 
 const blockContainsCloze = (block: AugmentedBlock) => {
