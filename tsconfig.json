@@ -22,7 +22,6 @@
     "sourceMap": true,
     "rootDir": ".",
     "outDir": "./dist/tsc/",
-    "types": ["jest"],
     "lib": ["ES2020", "DOM"]
   },
   "include": ["src/**/*.ts", "test/**/*.ts"]
