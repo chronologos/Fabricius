@@ -34,6 +34,7 @@ export const ANKI_FIELD_FOR_TITLE = 'Title';
 
 // --- internals below this ---
 export const METADATA_SCHEMA_VERSION = 2;
+export const ANKI_CONNECT_RETRIES = 1;
 export const ANKI_CONNECT_VERSION = 6;
 export const ANKI_CONNECT_FINDNOTES = 'findNotes';
 export const ANKI_CONNECT_NOTESINFO = 'notesInfo';

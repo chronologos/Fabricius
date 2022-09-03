@@ -19,7 +19,9 @@ const syncNow = async (extensionAPI: any) => {
 
   // STEP 0: Load all config
   const allSettings = await extensionAPI.settings.getAll();
-  console.log('settings: ' + JSON.stringify(allSettings));
+  console.log(
+    'settings before merging defaults: ' + JSON.stringify(allSettings)
+  );
   const groupTag = await getOrDefault(
     extensionAPI.settings.get(config.GROUPED_CLOZE_TAG_KEY),
     config.GROUPED_CLOZE_TAG
@@ -54,7 +56,7 @@ const syncNow = async (extensionAPI: any) => {
   );
 
   console.log(
-    'settings - clozeField:' +
+    'settings after merging defaults - clozeField:' +
       clozeField +
       ', metadataField:' +
       metadataField +
@@ -81,12 +83,12 @@ const syncNow = async (extensionAPI: any) => {
   });
   const singleBlocks: AugmentedBlock[] = await retry(
     () => pullBlocksWithTag(config.CLOZE_TAG), // TODO: not using settings panel
-    3
+    config.ANKI_CONNECT_RETRIES
   );
   // groupBlocks are augmented with information from their parent.
   const groupBlocks = await retry(
     () => pullBlocksUnderTag(groupTag, titleTag),
-    3
+    config.ANKI_CONNECT_RETRIES
   );
   const groupClozeBlocks: AugmentedBlock[] =
     groupBlocks.filter(blockContainsCloze);
@@ -95,7 +97,7 @@ const syncNow = async (extensionAPI: any) => {
   // console.log(JSON.stringify(groupClozeBlocks, null, 2));
   const blockWithNid: [Block, number][] = await retry(
     () => Promise.all(blocks.map(b => processSingleBlock(b))),
-    3
+    config.ANKI_CONNECT_RETRIES
   );
   const blocksWithNids = blockWithNid.filter(
     ([_, nid]) => nid !== config.NO_NID
@@ -103,7 +105,10 @@ const syncNow = async (extensionAPI: any) => {
   const blocksWithNoNids = blockWithNid
     .filter(([_, nid]) => nid === config.NO_NID)
     .map(b => b[0]);
-  const existingNotes = await retry(() => batchFindNotes(blocksWithNids), 3);
+  const existingNotes = await retry(
+    () => batchFindNotes(blocksWithNids),
+    config.ANKI_CONNECT_RETRIES
+  );
 
   // STEP 2: For blocks that exist in both Anki and Roam, generate `blockWithNote`.
   // The schema for `blockWithNote` is shown in `NOTES.md`.
@@ -133,7 +138,9 @@ const syncNow = async (extensionAPI: any) => {
   );
   console.log('[syncNow] total synced blocks ' + blocks.length);
   console.log('[syncNow] # new blocks ' + blocksWithNoNids.length);
-  console.log(blocksWithNoNids.map(b => b.string));
+  console.log(
+    '[syncNow] blocks being added: ' + blocksWithNoNids.map(b => b.string)
+  );
   console.log(
     '[syncNow] # updated blocks/notes that are newer in roam ' +
       newerInRoam.length
@@ -161,7 +168,7 @@ const syncNow = async (extensionAPI: any) => {
           )
         )
       ),
-    3
+    config.ANKI_CONNECT_RETRIES
   );
   console.log(
     '[syncNow] updateExistingInAnki: ' + JSON.stringify(updateExistingInAnki)
@@ -185,7 +192,7 @@ const syncNow = async (extensionAPI: any) => {
           )
         )
       ),
-    3
+    config.ANKI_CONNECT_RETRIES
   );
   console.log(
     '[syncNow] updateExistingInRoam: ' + JSON.stringify(updateExistingInRoam)
@@ -205,7 +212,7 @@ const syncNow = async (extensionAPI: any) => {
         deck,
         model
       ),
-    3
+    config.ANKI_CONNECT_RETRIES
   );
   console.log('[syncNow] new cards: ' + JSON.stringify(results)); // should be an array of ids if there are no errors
   if (results === null || (Array.isArray(results) && results.includes(null))) {
