@@ -14,7 +14,7 @@
 1. Install the [AnkiConnect](https://ankiweb.net/shared/info/2055492159) plugin for Anki.
 2. Configure AnkiConnect: Go to `Anki -> Tools -> Addons -> Anki Connect -> Config` and amend `webCorsOriginList` to include `https://roamresearch.com`
 3. Create an Anki note type based on Cloze named `ClozeRoam`. It needs to have the fields `Text`, `Metadata`, `Extra` and `Title`. Upon syncing, notes will be created in a deck named `Max Infinity`, which has to exist. These fields can be configured in Roam settings.
-   - ![Example](note-deck-setup.png)
+   - ![Example](https://github.com/chronologos/Fabricius/blob/master/note-deck-setup.png)
 4. Modify the template for the note type to look something like this:
 
 ```html
@@ -29,8 +29,8 @@
 {{cloze:Text}}
 ```
 
-5. Before clicking on the [Sync button](sync-button.png), Anki must be running. Sync is fastest if Anki is running in the foreground.
-6. If cards don't sync, it's likely because Anki has been in the background for too long. Try syncing again after switching it to the foreground.
+1. If the extension loaded correctly, the [Sync button](https://github.com/chronologos/Fabricius/blob/master/sync-button.png) will be on the top right. It looks like the number 8 on its side. Before clicking, make sure Anki is running.
+2. If cards don't sync, it's likely because Anki has been in the background for too long. Try syncing again after switching it to the foreground.
 
 ## Recommended use
 
