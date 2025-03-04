@@ -101,6 +101,7 @@ export const pullBlocksUnderTag = async (
 
 const ROAM_CLOZE_PATTERN = /{c(\d+):([^}:]*)}/g;
 const ROAM_CLOZE_WITH_HINT_PATTERN = /{c(\d*):([^}:]*):hint:([^}]*)}/g;
+const ROAM_BASIC_PATTERN = /\(Front\)([\s\S]*?)\(Back\)([\s\S]*)/;
 
 export const convertToCloze = (s: string) => {
   if (s.match(ROAM_CLOZE_PATTERN)) {
@@ -110,6 +111,23 @@ export const convertToCloze = (s: string) => {
   }
   s = basicMarkdownToHtml(s);
   return s;
+};
+
+export const parseBasicFlashcard = (s: string) => {
+  // Remove the #srs/basic tag and its variations before parsing
+  s = s.replace(/#srs\/basic/g, '');
+  s = s.replace(/#\[\[srs\/basic\]\]/g, '');
+  
+  const match = s.match(ROAM_BASIC_PATTERN);
+  if (match) {
+    const front = match[1].trim();
+    const back = match[2].trim();
+    return {
+      front: basicMarkdownToHtml(front),
+      back: basicMarkdownToHtml(back),
+    };
+  }
+  return null;
 };
 
 export const noteMetadata = (block: AugmentedBlock) => {

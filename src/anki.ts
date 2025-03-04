@@ -1,6 +1,6 @@
 import {config} from './config';
 import {AugmentedBlock, Block, BlockWithNote, NewNote} from './types';
-import {convertToCloze, noteMetadata} from './roam';
+import {convertToCloze, noteMetadata, parseBasicFlashcard} from './roam';
 
 // Returns anki notes with the given note IDs.
 /*
@@ -33,21 +33,36 @@ export const batchAddNotes = async (
   titleField: string,
   titleClozeTag: string,
   deck: string,
-  model: string
+  model: string,
+  basicModel: string = config.ANKI_BASIC_MODEL_NAME,
+  frontField: string = config.ANKI_FIELD_FOR_FRONT,
+  backField: string = config.ANKI_FIELD_FOR_BACK
 ): Promise<Number | null | Array<Number>> => {
-  const newNotes = blocks.map(b =>
-    blockToAnkiSyntax(
-      b,
-      clozeTextField,
-      clozeTagField,
-      groupHeaderField,
-      groupedClozeTag,
-      titleField,
-      titleClozeTag,
-      deck,
-      model
-    )
-  );
+  const newNotes = blocks.map(b => {
+    // Check if this is a basic flashcard
+    if (b.string.includes(config.BASIC_TAG)) {
+      return blockToBasicAnkiSyntax(
+        b,
+        clozeTagField,
+        deck,
+        basicModel,
+        frontField,
+        backField
+      );
+    } else {
+      return blockToAnkiSyntax(
+        b,
+        clozeTextField,
+        clozeTagField,
+        groupHeaderField,
+        groupedClozeTag,
+        titleField,
+        titleClozeTag,
+        deck,
+        model
+      );
+    }
+  });
   return invokeAnkiConnect(
     config.ANKI_CONNECT_ADDNOTES,
     config.ANKI_CONNECT_VERSION,
@@ -64,19 +79,35 @@ export const updateNote = async (
   titleField: string,
   titleClozeTag: string,
   deck: string,
-  model: string
+  model: string,
+  basicModel: string = config.ANKI_BASIC_MODEL_NAME,
+  frontField: string = config.ANKI_FIELD_FOR_FRONT,
+  backField: string = config.ANKI_FIELD_FOR_BACK
 ): Promise<Number | null | Array<Number>> => {
-  const newNote = blockToAnkiSyntax(
-    blockWithNote.block,
-    clozeTextField,
-    clozeTagField,
-    groupHeaderField,
-    groupedClozeTag,
-    titleField,
-    titleClozeTag,
-    deck,
-    model
-  );
+  let newNote;
+  // Check if this is a basic flashcard
+  if (blockWithNote.block.string.includes(config.BASIC_TAG)) {
+    newNote = blockToBasicAnkiSyntax(
+      blockWithNote.block,
+      clozeTagField,
+      deck,
+      basicModel,
+      frontField,
+      backField
+    );
+  } else {
+    newNote = blockToAnkiSyntax(
+      blockWithNote.block,
+      clozeTextField,
+      clozeTagField,
+      groupHeaderField,
+      groupedClozeTag,
+      titleField,
+      titleClozeTag,
+      deck,
+      model
+    );
+  }
   newNote.id = blockWithNote.note.noteId;
   delete newNote.deckName;
   delete newNote.modelName;
@@ -167,6 +198,34 @@ const blockToAnkiSyntax = (
     console.log('redacting one field');
     fieldsObj[groupHeaderField] = '';
   }
+  return {
+    deckName: deck,
+    modelName: model,
+    fields: fieldsObj,
+  };
+};
+
+const blockToBasicAnkiSyntax = (
+  block: AugmentedBlock,
+  metadataField: string,
+  deck: string,
+  model: string,
+  frontField: string,
+  backField: string
+): NewNote => {
+  const fieldsObj: any = {};
+  // Parse the basic flashcard content
+  const basicCard = parseBasicFlashcard(block.string);
+  if (basicCard) {
+    fieldsObj[frontField] = basicCard.front;
+    fieldsObj[backField] = basicCard.back;
+  } else {
+    // Fallback if parsing fails
+    fieldsObj[frontField] = 'Error: Could not parse basic flashcard';
+    fieldsObj[backField] = 'Please format as (Front) question (Back) answer';
+  }
+  // Add metadata
+  fieldsObj[metadataField] = noteMetadata(block);
   return {
     deckName: deck,
     modelName: model,

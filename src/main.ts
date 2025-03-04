@@ -9,7 +9,12 @@ import {
   invokeAnkiConnect,
 } from './anki';
 import {config} from './config';
-import {convertToCloze, pullBlocksUnderTag, pullBlocksWithTag} from './roam';
+import {
+  convertToCloze,
+  pullBlocksUnderTag,
+  pullBlocksWithTag,
+  parseBasicFlashcard,
+} from './roam';
 import {render} from './toast';
 import {Intent} from '@blueprintjs/core';
 
@@ -38,6 +43,10 @@ const syncNow = async (extensionAPI: any) => {
     extensionAPI.settings.get(config.ANKI_MODEL_NAME_KEY),
     config.ANKI_MODEL_NAME
   );
+  const basicModel = await getOrDefault(
+    extensionAPI.settings.get(config.ANKI_BASIC_MODEL_NAME_KEY),
+    config.ANKI_BASIC_MODEL_NAME
+  );
   const clozeField = await getOrDefault(
     extensionAPI.settings.get(config.ANKI_FIELD_FOR_CLOZE_TEXT_KEY),
     config.ANKI_FIELD_FOR_CLOZE_TEXT
@@ -53,6 +62,14 @@ const syncNow = async (extensionAPI: any) => {
   const metadataField = await getOrDefault(
     extensionAPI.settings.get(config.ANKI_FIELD_FOR_METADATA_KEY),
     config.ANKI_FIELD_FOR_METADATA
+  );
+  const frontField = await getOrDefault(
+    extensionAPI.settings.get(config.ANKI_FIELD_FOR_FRONT_KEY),
+    config.ANKI_FIELD_FOR_FRONT
+  );
+  const backField = await getOrDefault(
+    extensionAPI.settings.get(config.ANKI_FIELD_FOR_BACK_KEY),
+    config.ANKI_FIELD_FOR_BACK
   );
 
   console.log(
@@ -71,10 +88,16 @@ const syncNow = async (extensionAPI: any) => {
       ', deck:' +
       deck +
       ', model:' +
-      model
+      model +
+      ', basicModel:' +
+      basicModel +
+      ', frontField:' +
+      frontField +
+      ', backField:' +
+      backField
   );
 
-  // STEP 1: Get all blocks that reference CLOZE_TAG
+  // STEP 1: Get all blocks that reference CLOZE_TAG and BASIC_TAG
   // Useful attributes in these blocks: uid, string, time (unix epoch)
   render({
     id: 'syncer',
@@ -85,6 +108,11 @@ const syncNow = async (extensionAPI: any) => {
     () => pullBlocksWithTag(config.CLOZE_TAG), // TODO: not using settings panel
     config.ANKI_CONNECT_RETRIES
   );
+  // Get basic flashcard blocks
+  const basicBlocks: AugmentedBlock[] = await retry(
+    () => pullBlocksWithTag(config.BASIC_TAG),
+    config.ANKI_CONNECT_RETRIES
+  );
   // groupBlocks are augmented with information from their parent.
   const groupBlocks = await retry(
     () => pullBlocksUnderTag(groupTag, titleTag),
@@ -92,7 +120,9 @@ const syncNow = async (extensionAPI: any) => {
   );
   const groupClozeBlocks: AugmentedBlock[] =
     groupBlocks.filter(blockContainsCloze);
-  const blocks: AugmentedBlock[] = singleBlocks.concat(groupClozeBlocks);
+  const blocks: AugmentedBlock[] = singleBlocks
+    .concat(groupClozeBlocks)
+    .concat(basicBlocks);
   // console.log(JSON.stringify(singleBlocks, null, 2));
   // console.log(JSON.stringify(groupClozeBlocks, null, 2));
   const blockWithNid: [Block, number][] = await retry(
@@ -130,12 +160,29 @@ const syncNow = async (extensionAPI: any) => {
   const newerInRoam = blockWithNote.filter(
     x => x.block.time > x.note.block_time
   );
-  const newerInAnki = blockWithNote.filter(
-    x =>
-      x.block.time <= x.note.block_time &&
-      // TODO(better diff algorithm here)
-      convertToCloze(x.block.string) !== x.note['fields'][clozeField]['value']
-  );
+  
+  const newerInAnki = blockWithNote.filter(x => {
+    // First check if the block is newer in Anki based on timestamp
+    if (x.block.time > x.note.block_time) {
+      return false;
+    }
+    
+    // Then check if content has changed
+    if (x.block.string.includes(config.BASIC_TAG)) {
+      // For basic flashcards, parse and compare front/back content
+      const basicCard = parseBasicFlashcard(x.block.string);
+      if (!basicCard) return false;
+      
+      const frontInAnki = x.note['fields'][frontField]['value'];
+      const backInAnki = x.note['fields'][backField]['value'];
+      
+      return basicCard.front !== frontInAnki || basicCard.back !== backInAnki;
+    } else {
+      // For cloze flashcards, use the existing comparison
+      return convertToCloze(x.block.string) !== x.note['fields'][clozeField]['value'];
+    }
+  });
+  
   console.log('[syncNow] total synced blocks ' + blocks.length);
   console.log('[syncNow] # new blocks ' + blocksWithNoNids.length);
   console.log(
@@ -164,7 +211,10 @@ const syncNow = async (extensionAPI: any) => {
             titleField,
             titleTag,
             deck,
-            model
+            model,
+            basicModel,
+            frontField,
+            backField
           )
         )
       ),
@@ -188,7 +238,10 @@ const syncNow = async (extensionAPI: any) => {
             titleField,
             titleTag,
             deck,
-            model
+            model,
+            basicModel,
+            frontField,
+            backField
           )
         )
       ),
@@ -198,8 +251,8 @@ const syncNow = async (extensionAPI: any) => {
     '[syncNow] updateExistingInRoam: ' + JSON.stringify(updateExistingInRoam)
   ); // should be an array of nulls if there are no errors
 
-  // STEP 6: Create new cards in Anki
-  const results = await retry(
+  // STEP 6: Add new notes to Anki
+  const addNewToAnki = await retry(
     () =>
       batchAddNotes(
         blocksWithNoNids,
@@ -210,24 +263,22 @@ const syncNow = async (extensionAPI: any) => {
         titleField,
         titleTag,
         deck,
-        model
+        model,
+        basicModel,
+        frontField,
+        backField
       ),
     config.ANKI_CONNECT_RETRIES
   );
-  console.log('[syncNow] new cards: ' + JSON.stringify(results)); // should be an array of ids if there are no errors
-  if (results === null || (Array.isArray(results) && results.includes(null))) {
-    render({
-      id: 'syncer',
-      content:
-        'Fabricius: failed to sync. Please check deck/model/field settings.',
-      intent: Intent.DANGER,
-    });
-  }
+  console.log('[syncNow] addNewToAnki: ' + JSON.stringify(addNewToAnki));
+
+  // STEP 7: Notify user
   render({
     id: 'syncer',
-    content: 'Fabricius: sync complete!',
+    content: `Fabricius: synced ${blocks.length} blocks (${blocksWithNoNids.length} new, ${newerInRoam.length} updated)`,
     intent: Intent.SUCCESS,
   });
+  console.log('[syncNow] finished');
 };
 
 // --- UI logic ---
@@ -323,6 +374,16 @@ const panelConfig = {
       },
     },
     {
+      id: config.ANKI_BASIC_MODEL_NAME_KEY,
+      name: 'Anki basic model',
+      description:
+        '[Required] The Anki model (note type) that will be created in syncs for basic flashcards. This must contain all required fields (prefixed by [Anki note field]).',
+      action: {
+        type: 'input',
+        placeholder: config.ANKI_BASIC_MODEL_NAME,
+      },
+    },
+    {
       id: config.ANKI_FIELD_FOR_CLOZE_TEXT_KEY,
       name: '[Anki note field] cloze text',
       description: '[Required]',
@@ -359,6 +420,24 @@ const panelConfig = {
         placeholder: config.ANKI_FIELD_FOR_METADATA,
       },
     },
+    {
+      id: config.ANKI_FIELD_FOR_FRONT_KEY,
+      name: '[Anki note field] front',
+      description: '[Required]',
+      action: {
+        type: 'input',
+        placeholder: config.ANKI_FIELD_FOR_FRONT,
+      },
+    },
+    {
+      id: config.ANKI_FIELD_FOR_BACK_KEY,
+      name: '[Anki note field] back',
+      description: '[Required]',
+      action: {
+        type: 'input',
+        placeholder: config.ANKI_FIELD_FOR_BACK,
+      },
+    },
   ],
 };
 
@@ -385,7 +464,9 @@ const retry = async (fn: () => Promise<any>, n: number) => {
   for (let i = 0; i < n; i++) {
     try {
       return await fn();
-    } catch {}
+    } catch (error) {
+      console.log(`Retry attempt ${i + 1} failed:`, error);
+    }
   }
   render({
     id: 'syncer',
@@ -414,11 +495,26 @@ const updateBlock = async (
   titleField: string,
   titleClozeTag: string,
   deck: string,
-  model: string
+  model: string,
+  basicModel: string,
+  frontField: string,
+  backField: string
 ): Promise<any> => {
-  const noteText =
-    blockWithNote.note.fields[config.ANKI_FIELD_FOR_CLOZE_TEXT]['value'];
-  const blockText = convertToRoamBlock(noteText);
+  let blockText;
+  // Check if this is a basic flashcard
+  if (blockWithNote.block.string.includes(config.BASIC_TAG)) {
+    // For basic flashcards, construct the format (Front) ... (Back) ...
+    const front = blockWithNote.note.fields[frontField]['value'];
+    const back = blockWithNote.note.fields[backField]['value'];
+    const frontText = basicHtmlToMarkdown(front);
+    const backText = basicHtmlToMarkdown(back);
+    // Add the tag at the end, not within the content
+    blockText = `(Front) ${frontText} (Back) ${backText} #${config.BASIC_TAG}`;
+  } else {
+    // For cloze flashcards, use the existing logic
+    const noteText = blockWithNote.note.fields[clozeTextField]['value'];
+    blockText = convertToRoamBlock(noteText);
+  }
   // success? - boolean
   const updateRes = window.roamAlphaAPI.updateBlock({
     block: {
@@ -447,18 +543,26 @@ const updateBlock = async (
     titleField,
     titleClozeTag,
     deck,
-    model
+    model,
+    basicModel,
+    frontField,
+    backField
   );
 };
 
 const processSingleBlock = async (block: Block): Promise<[Block, Number]> => {
   // console.log('searching for block ' + block.uid);
+  // Determine which model to search for based on the block content
+  const modelName = block.string.includes(config.BASIC_TAG) 
+    ? config.ANKI_BASIC_MODEL_NAME 
+    : config.ANKI_MODEL_NAME;
+  
   // TODO: should do a more exact structural match on the block uid here, but a collision *seems* unlikely.
   const nid: Number | null | Number[] = await invokeAnkiConnect(
     config.ANKI_CONNECT_FINDNOTES,
     config.ANKI_CONNECT_VERSION,
     {
-      query: `${config.ANKI_FIELD_FOR_METADATA}:re:${block.uid} AND note:${config.ANKI_MODEL_NAME}`,
+      query: `${config.ANKI_FIELD_FOR_METADATA}:re:${block.uid} AND note:${modelName}`,
     }
   );
   if (nid === null) {
@@ -497,11 +601,10 @@ const convertToRoamBlock = (s: string) => {
 };
 
 const basicHtmlToMarkdown = (s: string) => {
-  s = s.replace('<b>', '**');
-  s = s.replace('</b>', '**');
-  s = s.replace('<i>', '__');
-  s = s.replace('</i>', '__');
+  // Convert HTML back to markdown
+  s = s.replace(/<b>(.*?)<\/b>/g, '**$1**');
+  s = s.replace(/<i>(.*?)<\/i>/g, '__$1__');
   s = s.replace('&nbsp;', ' ');
-  s = s.replace('<br>', '\n');
+  s = s.replace(/<br>/g, '\n');
   return s;
 };

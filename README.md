@@ -15,7 +15,8 @@
 2. Configure AnkiConnect: Go to `Anki -> Tools -> Addons -> Anki Connect -> Config` and amend `webCorsOriginList` to include `https://roamresearch.com`
 3. Create an Anki note type based on Cloze named `ClozeRoam`. It needs to have the fields `Text`, `Metadata`, `Extra` and `Title`. Upon syncing, notes will be created in a deck named `Max Infinity`, which has to exist. These fields can be configured in Roam settings.
    - ![Example](https://firebasestorage.googleapis.com/v0/b/firescript-577a2.appspot.com/o/imgs%2Fapp%2FFabricius%2FZlInA1_Yua.png?alt=media&token=e0029764-bff7-4175-880d-8638ab81ff92)
-4. Modify the template for the note type to look something like this:
+4. For basic flashcards, make sure you have a note type named `Basic` with fields `Front`, `Back`, and `Metadata`. This can also be configured in Roam settings.
+5. Modify the template for the cloze note type to look something like this:
 
 ```html
 <!-- front -->
@@ -36,6 +37,8 @@
 
 The recommended use is to create simple Q&A cards in Roam using the provided cloze functionality. For instance, you may be taking notes about an article or book you are reading. For each section of your notes in Roam, you could create a block for flashcards like so:
 
+### Cloze Deletion Cards
+
 ```text
 - How to cook onion soup
   - Onion soup is great...
@@ -48,7 +51,18 @@ The recommended use is to create simple Q&A cards in Roam using the provided clo
     - ...
 ```
 
-This will create two flashcards.
+### Basic Front/Back Cards
+
+You can also create basic front/back flashcards without cloze deletion:
+
+```text
+- Capitals of the World
+  - (Front) What is the capital of England? (Back) London #[[srs/basic]]
+  - (Front) What is the capital of France? (Back) Paris #[[srs/basic]]
+  - (Front) What is the capital of Japan? (Back) Tokyo #[[srs/basic]]
+```
+
+The format is `(Front) your question here (Back) your answer here #srs/basic`. The tag `#srs/basic` is required to identify the block as a basic flashcard, but it will not appear on the actual flashcard in Anki.
 
 ## Caveats and Limitations
 - Don't edit the sync metadata on the Anki note.
