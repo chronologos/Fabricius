@@ -140,6 +140,10 @@ export const noteMetadata = (block: AugmentedBlock) => {
 };
 
 const basicMarkdownToHtml = (s: string) => {
+  // Convert image markdown to HTML img tags
+  s = s.replace(/!\[\]\((https?:\/\/[^\s)]+)\)/g, '<img src="$1">');
+  
+  // Convert other markdown elements
   s = s.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
   s = s.replace(/__(.*?)__/g, '<i>$1</i>');
   s = s.replace(/\n/g, '<br>');

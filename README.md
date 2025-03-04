@@ -64,6 +64,21 @@ You can also create basic front/back flashcards without cloze deletion:
 
 The format is `(Front) your question here (Back) your answer here #srs/basic`. The tag `#srs/basic` is required to identify the block as a basic flashcard, but it will not appear on the actual flashcard in Anki.
 
+### Image Support
+
+You can include images in your flashcards using standard Markdown image syntax:
+
+```text
+- Onion Soup Recipe #[[srs/cloze-g]]
+    - Q: What is the cook time?
+      A: {c1:20 minutes}
+      ![](https://example.com/image.png)
+    - Q: How many onions should I use?
+      A: {c1: 2 per person.}
+```
+
+Images will be properly converted to HTML img tags in Anki and will be displayed on your flashcards. This works for both cloze deletion and basic flashcards.
+
 ## Caveats and Limitations
 - Don't edit the sync metadata on the Anki note.
 - The Roam block UID is used to identify the corresponding note in Anki. Avoid taking actions which cause the block UID of a Roam block to change.

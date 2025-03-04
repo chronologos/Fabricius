@@ -606,5 +606,7 @@ const basicHtmlToMarkdown = (s: string) => {
   s = s.replace(/<i>(.*?)<\/i>/g, '__$1__');
   s = s.replace('&nbsp;', ' ');
   s = s.replace(/<br>/g, '\n');
+  // Convert HTML img tags back to markdown
+  s = s.replace(/<img src="(https?:\/\/[^"]+)">/g, '![]($1)');
   return s;
 };
