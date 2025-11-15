@@ -1,16 +1,16 @@
 {
   "devDependencies": {
-    "@types/node": "^17.0.21",
-    "@types/react-dom": "^18.0.6",
-    "@typescript-eslint/eslint-plugin": "^5.14.0",
-    "@typescript-eslint/parser": "^5.14.0",
-    "eslint": "^8.11.0",
+    "@types/node": "^24.10.1",
+    "@types/react-dom": "^19.2.3",
+    "@typescript-eslint/eslint-plugin": "^8.46.4",
+    "@typescript-eslint/parser": "^8.46.4",
+    "eslint": "^9.39.1",
     "eslint-config-google": "^0.14.0",
-    "gts": "^4.0.0",
-    "ts-loader": "^9.3.1",
-    "typescript": "^4.8.2",
-    "webpack": "^5.74.0",
-    "webpack-cli": "^4.10.0"
+    "gts": "^6.0.2",
+    "ts-loader": "^9.5.4",
+    "typescript": "^5.9.3",
+    "webpack": "^5.102.1",
+    "webpack-cli": "^6.0.1"
   },
   "scripts": {
     "lint": "gts lint",
@@ -20,8 +20,8 @@
     "fix": "gts fix"
   },
   "dependencies": {
-    "@blueprintjs/core": "^3.54.0",
-    "react": "^17.0.0",
-    "react-dom": "^17.0.0"
+    "@blueprintjs/core": "^6.3.4",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
   }
 }

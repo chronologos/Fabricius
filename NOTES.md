@@ -1,6 +1,6 @@
 # Development
 - reload roam after replacing javascript, otherwise plugin will not update.
-- `npm run bundle` to compile typescript.
+- `pnpm run bundle` to compile typescript.
 
 # Notes
 - Q: Should we resolve block refs? How about recursively?

@@ -1,4 +1,5 @@
 node_modules/
+pnpm-debug.log*
 v0.1/roam/mock.py
 v0.1/roam/real_deps.py
 v0.1/roam/secrets.py
